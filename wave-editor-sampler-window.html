@@ -472,6 +472,10 @@
       background: linear-gradient(180deg, rgba(26,39,56,.55), rgba(18,26,36,.55));
       box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
     }
+    .gridPanel.off{
+      opacity:.55;
+      filter:saturate(.65);
+    }
     .gridPanel h3{
       margin:0 0 10px 0;
       font-size:13px;
@@ -714,7 +718,7 @@
         </div>
 
         <aside class="gridPanel" aria-label="grid panel">
-          <h3>🧭 Grid</h3>
+          <h3>🧭 Grid <button class="miniToggle" id="gridPower" aria-pressed="true">Power</button></h3>
           <div class="gRow">
             <span>Width</span>
             <div class="row" style="gap:6px;">
@@ -732,16 +736,26 @@
           </div>
           <div class="gRow">
             <span>BPM</span>
-            <span class="pill" id="bpmPill">126.32</span>
+            <div class="row" style="gap:6px;">
+              <button class="btn icon" id="bpmHalf" title="BPM halve">−</button>
+              <span class="pill" id="bpmPill">126.32</span>
+              <button class="btn icon" id="bpmDouble" title="BPM double">+</button>
+            </div>
           </div>
           <div class="gRow">
             <span>Signature</span>
-            <span class="pill" id="sigPill">4/4</span>
+            <select class="select" id="sigSelect">
+              <option value="4/4">4/4</option>
+              <option value="3/4">3/4</option>
+              <option value="6/8">6/8</option>
+            </select>
           </div>
-
-          <div style="margin-top:12px; font-size:12px; color:var(--muted2); line-height:1.35;">
-            Grid/slicing is scaffolded here for later. In this build, the waveform view focuses on
-            <b>loop</b> + <b>zone</b> markers, snapping, magnify zoom, and transport.
+          <div class="gRow" id="autoThresholdRow">
+            <span>Threshold</span>
+            <input id="gridThreshold" type="range" min="0" max="1" step="0.01" value="0.35" style="width:130px;" />
+          </div>
+          <div style="margin-top:8px; font-size:12px; color:var(--muted2); line-height:1.35;">
+            Drag marker <b>1</b> to offset the full grid. Top handles audition slices.
           </div>
         </aside>
       </div>
@@ -833,6 +847,22 @@
         this.nudgeLoopEndMinus   = document.querySelector('#nudgeLoopEndMinus');
         this.nudgeLoopEndPlus    = document.querySelector('#nudgeLoopEndPlus');
 
+
+        // Grid panel
+        this.gridPanel = document.querySelector('.gridPanel');
+        this.gridPowerBtn = document.querySelector('#gridPower');
+        this.gridMinusBtn = document.querySelector('#gridMinus');
+        this.gridPlusBtn = document.querySelector('#gridPlus');
+        this.gridWidthPill = document.querySelector('#gridWidthPill');
+        this.gridFixBtn = document.querySelector('#gridFix');
+        this.gridAutoBtn = document.querySelector('#gridAuto');
+        this.bpmPill = document.querySelector('#bpmPill');
+        this.bpmHalfBtn = document.querySelector('#bpmHalf');
+        this.bpmDoubleBtn = document.querySelector('#bpmDouble');
+        this.sigSelect = document.querySelector('#sigSelect');
+        this.gridThresholdEl = document.querySelector('#gridThreshold');
+        this.autoThresholdRow = document.querySelector('#autoThresholdRow');
+
         // Tabs
         this.tabEls = Array.from(document.querySelectorAll('.tab'));
         this.panelLoop = document.querySelector('#panelLoop');
@@ -877,6 +907,21 @@
 
         // Magnify tool
         this.magnify = false;
+
+        // Grid + slicing
+        this.gridPower = true;
+        this.gridMode = 'auto';
+        this.gridWidthOptions = ['1/1','1/2','1/4','1/8','1/16'];
+        this.gridWidthIdx = 0;
+        this.gridBpm = 126.32;
+        this.gridSig = '4/4';
+        this.gridThreshold = 0.35;
+        this.gridMarkers = [];
+        this.gridOffset = 0;
+        this.gridTransientCandidates = [];
+
+        // Vertical view
+        this.viewOffsetY = 0;
 
         // Dragging / interactions
         this.drag = null;   // {type:'zoneStart'|'zoneEnd'|'loopStart'|'loopEnd'|'frame', startX, ...}
@@ -948,10 +993,26 @@
         // Side strip
         this.zoomYPlus.addEventListener('click', ()=>{ this.zoomY = Math.min(10, this.zoomY*1.25); this.needsRedraw=true; });
         this.zoomYMinus.addEventListener('click', ()=>{ this.zoomY = Math.max(0.2, this.zoomY/1.25); this.needsRedraw=true; });
-        this.fitYBtn.addEventListener('click', ()=>{ this.zoomY = 1.0; this.needsRedraw=true; });
+        this.fitYBtn.addEventListener('click', ()=>{ this.zoomY = 1.0; this.viewOffsetY = 0; this.needsRedraw=true; });
 
         this.zoomInBtn.addEventListener('click', ()=>this._zoomAround((this.viewStart+this.viewEnd)/2, 0.6));
         this.zoomOutBtn.addEventListener('click', ()=>this._zoomOutOne());
+
+        // Grid controls
+        this.gridPowerBtn.addEventListener('click', ()=>{
+          this.gridPower = !this.gridPower;
+          this._rebuildGridMarkers();
+          this._syncGridPanelUI();
+          this.needsRedraw = true;
+        });
+        this.gridFixBtn.addEventListener('click', ()=>{ this.gridMode = 'fix'; this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.gridAutoBtn.addEventListener('click', ()=>{ this.gridMode = 'auto'; this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.gridMinusBtn.addEventListener('click', ()=>{ this.gridWidthIdx = this._clamp(this.gridWidthIdx + 1, 0, this.gridWidthOptions.length-1); this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.gridPlusBtn.addEventListener('click', ()=>{ this.gridWidthIdx = this._clamp(this.gridWidthIdx - 1, 0, this.gridWidthOptions.length-1); this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.bpmHalfBtn.addEventListener('click', ()=>{ this.gridBpm = Math.max(20, this.gridBpm / 2); this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.bpmDoubleBtn.addEventListener('click', ()=>{ this.gridBpm = Math.min(400, this.gridBpm * 2); this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.sigSelect.addEventListener('change', ()=>{ this.gridSig = this.sigSelect.value; this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.gridThresholdEl.addEventListener('input', ()=>{ this.gridThreshold = Number(this.gridThresholdEl.value); if(this.gridMode==='auto'){ this._rebuildGridMarkers(); this.needsRedraw = true; } });
 
         // Loop panel: slots
         this.slotEls.forEach(el=>{
@@ -1062,6 +1123,7 @@
         this.wavePane.addEventListener('pointerdown', (e)=>this._onPointerDown(e));
         window.addEventListener('pointermove', (e)=>this._onPointerMove(e));
         window.addEventListener('pointerup', (e)=>this._onPointerUp(e));
+        this.wavePane.addEventListener('wheel', (e)=>this._onWheel(e), {passive:false});
       }
 
       _initAudioDemo(){
@@ -1096,6 +1158,9 @@
         // Default loop (like screenshot: loop end at end of sample)
         this.loopSlots[0].start = 0;
         this.loopSlots[0].end = dur;
+        this._buildTransientCandidates();
+        this._rebuildGridMarkers();
+        this._syncGridPanelUI();
         this._renderLoopPanel();
         this._syncReadouts();
       }
@@ -1142,6 +1207,9 @@
           this.loopSlots[this.activeSlot].end = Math.min(this.loopSlots[this.activeSlot].end, dur);
 
           this.sampleNameEl.textContent = file.name;
+          this._buildTransientCandidates();
+          this._rebuildGridMarkers();
+          this._syncGridPanelUI();
           this._syncReadouts();
           this._renderLoopPanel();
           this.needsRedraw = true;
@@ -1307,9 +1375,9 @@
         const loopOn = this._isPressed(this.loopToggle);
         const L = this._activeLoop();
 
-        // Zone playback vs loop-only playback
-        let start = loopOn ? L.start : this.zoneStart;
-        let end = loopOn ? L.end : this.zoneEnd;
+        // Zone-constrained playback (for normal play and loop play)
+        let start = loopOn ? Math.max(this.zoneStart, L.start) : this.zoneStart;
+        let end = loopOn ? Math.min(this.zoneEnd, L.end) : this.zoneEnd;
 
         start = this._clamp(start, 0, this.buffer.duration);
         end = this._clamp(end, 0, this.buffer.duration);
@@ -1457,10 +1525,25 @@
         }
       }
 
+      _onWheel(e){
+        e.preventDefault();
+        if(e.shiftKey){
+          const shift = (this.viewEnd - this.viewStart) * (e.deltaY > 0 ? 0.08 : -0.08);
+          this.viewStart += shift;
+          this.viewEnd += shift;
+          this._clampViewToZone();
+        }else{
+          const maxShift = Math.max(0, (this.zoomY - 1) * 0.45);
+          if(maxShift > 0){
+            this.viewOffsetY = this._clamp(this.viewOffsetY + (e.deltaY > 0 ? 0.06 : -0.06), -maxShift, maxShift);
+          }
+        }
+        this.needsRedraw = true;
+      }
+
       /* ============================= POINTER / MARKERS ============================= */
 
       _onPointerDown(e){
-        // Magnify behavior: if enabled OR Alt held
         const magnifyActive = this.magnify || e.altKey;
 
         const {x, y} = this._localXY(e);
@@ -1470,44 +1553,39 @@
         this.wavePane.setPointerCapture?.(e.pointerId);
 
         if(magnifyActive){
-          // Start a zoom frame selection
           this.drag = { type:'frame', x0:x, y0:y, x1:x, y1:y, wasClick:true };
           this.needsRedraw = true;
           return;
         }
 
         if(hit){
-          this.drag = { type: hit, x0:x, time0: this._xToTime(x) };
+          this.drag = { type: hit, x0:x, time0: this._xToTime(x), offset0: this.gridOffset };
           this.needsRedraw = true;
           return;
         }
 
-        // Otherwise, clicking inside waveform clears drag and (if magnify toggle on) zoom out
         this.drag = null;
       }
 
       _onPointerMove(e){
         if(!this.pointerDown || !this.drag) return;
-        const {x, y} = this._localXY(e);
+        const {x} = this._localXY(e);
 
         if(this.drag.type === 'frame'){
           this.drag.x1 = x;
-          this.drag.y1 = y;
           this.drag.wasClick = this.drag.wasClick && (Math.abs(this.drag.x1 - this.drag.x0) < 3);
           this.needsRedraw = true;
           return;
         }
 
-        // Dragging marker: convert x->time, apply snapping if needed
         const t = this._xToTime(x);
         if(this.drag.type === 'zoneStart'){
           this.zoneStart = this._snapSampleMarkerIfNeeded(t);
-          // keep within bounds
           this.zoneStart = this._clamp(this.zoneStart, 0, this.zoneEnd - 1/this.sampleRate);
-          // keep loop inside zone
           const L = this._activeLoop();
           L.start = Math.max(L.start, this.zoneStart);
           L.end = Math.max(L.end, L.start + 1/this.sampleRate);
+          this._rebuildGridMarkers();
         }
         if(this.drag.type === 'zoneEnd'){
           this.zoneEnd = this._snapSampleMarkerIfNeeded(t);
@@ -1515,8 +1593,8 @@
           const L = this._activeLoop();
           L.end = Math.min(L.end, this.zoneEnd);
           L.start = Math.min(L.start, L.end - 1/this.sampleRate);
-          // clamp view
           this._clampViewToZone();
+          this._rebuildGridMarkers();
         }
         if(this.drag.type === 'loopStart'){
           const L = this._activeLoop();
@@ -1527,6 +1605,15 @@
           const L = this._activeLoop();
           const snapped = this._snapLoopMarkerIfNeeded(t, 'end');
           L.end = this._clamp(snapped, L.start + 1/this.sampleRate, this.zoneEnd);
+        }
+        if(this.drag.type === 'gridOffset'){
+          this.gridOffset = this.drag.offset0 + (t - this.drag.time0);
+          this._rebuildGridMarkers();
+        }
+        if(this.drag.type.startsWith('gridMarker:')){
+          const i = Number(this.drag.type.split(':')[1]);
+          if(this.gridMarkers[i]) this.gridMarkers[i] = this._clamp(t, this.zoneStart, this.zoneEnd);
+          this.gridMarkers.sort((a,b)=>a-b);
         }
 
         this._renderLoopPanel();
@@ -1544,12 +1631,10 @@
 
           if(magnifyActive){
             if(Math.abs(dx) < 4){
-              // click -> zoom out
               this._zoomOutOne();
               this.drag = null;
               return;
             }
-            // drag -> zoom into selected time range
             const xA = Math.min(this.drag.x0, this.drag.x1);
             const xB = Math.max(this.drag.x0, this.drag.x1);
             const tA = this._xToTime(xA);
@@ -1566,6 +1651,11 @@
           return;
         }
 
+        if(this.drag && this.drag.type.startsWith('gridHandle:')){
+          const idx = Number(this.drag.type.split(':')[1]);
+          this._auditionGridSlice(idx);
+        }
+
         const changedMarker = this.drag && this.drag.type && this.drag.type !== 'frame';
         this.drag = null;
         this.needsRedraw = true;
@@ -1576,20 +1666,25 @@
       }
 
       _hitTestMarkers(x, y){
-        // Marker positions (in px)
         const zS = this._timeToX(this.zoneStart);
         const zE = this._timeToX(this.zoneEnd);
         const L = this._activeLoop();
         const lS = this._timeToX(L.start);
         const lE = this._timeToX(L.end);
+        const near = (a,b,r=6)=>Math.abs(a-b) < r;
 
-        const near = (a,b)=>Math.abs(a-b) < 6;
+        if(this.gridPower){
+          for(let i=0;i<this.gridMarkers.length;i++){
+            const gx = this._timeToX(this.gridMarkers[i]);
+            if(near(x,gx,7) && y <= 44) return `gridHandle:${i}`;
+            if(near(x,gx,6)) return (i===0) ? 'gridOffset' : `gridMarker:${i}`;
+          }
+        }
 
-        // Prefer loop markers over zone markers if very close
         if(near(x, lS)) return 'loopStart';
         if(near(x, lE)) return 'loopEnd';
-        if(near(x, zS)) return 'zoneStart';
-        if(near(x, zE)) return 'zoneEnd';
+        if(near(x, zS, 9) && y > this.wavePane.clientHeight - 34) return 'zoneStart';
+        if(near(x, zE, 7)) return 'zoneEnd';
         return null;
       }
 
@@ -1849,6 +1944,82 @@
         this._toast('Opened external Wave Editor window.');
       }
 
+
+      _syncGridPanelUI(){
+        this.gridPanel.classList.toggle('off', !this.gridPower);
+        this.gridPowerBtn.setAttribute('aria-pressed', String(this.gridPower));
+        this.gridFixBtn.setAttribute('aria-pressed', String(this.gridMode==='fix'));
+        this.gridAutoBtn.setAttribute('aria-pressed', String(this.gridMode==='auto'));
+        this.gridWidthPill.textContent = this.gridWidthOptions[this.gridWidthIdx];
+        this.bpmPill.textContent = this.gridBpm.toFixed(2);
+        this.sigSelect.value = this.gridSig;
+        this.autoThresholdRow.style.display = (this.gridMode==='auto') ? '' : 'none';
+      }
+
+      _gridStepSeconds(){
+        const width = this.gridWidthOptions[this.gridWidthIdx];
+        const beat = 60 / this.gridBpm;
+        const sigDen = Number(this.gridSig.split('/')[1] || 4);
+        const beatScale = 4 / sigDen;
+        const whole = beat * beatScale * 4;
+        const frac = Number(width.split('/')[1] || 1);
+        return whole / frac;
+      }
+
+      _buildTransientCandidates(){
+        this.gridTransientCandidates = [];
+        if(!this.mono || !this.buffer) return;
+        const win = Math.max(32, Math.floor(this.sampleRate * 0.01));
+        let prev = 0;
+        for(let i=win;i<this.mono.length-win;i+=win){
+          let e = 0;
+          for(let j=0;j<win;j++) e += Math.abs(this.mono[i+j]);
+          const env = e / win;
+          const diff = Math.max(0, env - prev);
+          if(diff > 0.0025) this.gridTransientCandidates.push({t:i/this.sampleRate, e:diff});
+          prev = env * 0.85 + prev * 0.15;
+        }
+      }
+
+      _rebuildGridMarkers(){
+        this.gridMarkers = [];
+        if(!this.buffer || !this.gridPower) return;
+        if(this.gridMode === 'fix'){
+          const step = this._gridStepSeconds();
+          const maxCount = 512;
+          for(let i=0;i<maxCount;i++){
+            const t = this.zoneStart + this.gridOffset + i*step;
+            if(t > this.zoneEnd) break;
+            if(t >= this.zoneStart) this.gridMarkers.push(t);
+          }
+        }else{
+          const maxE = this.gridTransientCandidates.reduce((m,c)=>Math.max(m,c.e), 1e-6);
+          const gate = maxE * this.gridThreshold;
+          this.gridMarkers = this.gridTransientCandidates
+            .filter(c=>c.t>=this.zoneStart && c.t<=this.zoneEnd && c.e>=gate)
+            .map(c=>c.t)
+            .slice(0, 512);
+          if(this.gridMarkers.length===0 || this.gridMarkers[0] > this.zoneStart + 1/this.sampleRate){
+            this.gridMarkers.unshift(this.zoneStart);
+          }
+        }
+      }
+
+      async _auditionGridSlice(idx){
+        if(!this.buffer || !this.gridPower || this.gridMarkers[idx] == null) return;
+        await this._ensureAudio();
+        this.stop();
+        const start = this._clamp(this.gridMarkers[idx], this.zoneStart, this.zoneEnd);
+        const next = this.gridMarkers[idx+1] ?? this.zoneEnd;
+        const end = this._clamp(next, start + 1/this.sampleRate, this.zoneEnd);
+        const src = this.audioCtx.createBufferSource();
+        src.buffer = this.buffer;
+        src.connect(this.masterGain);
+        try{ src.start(0, start, end-start); }catch(e){ console.warn(e); }
+        src.onended = ()=>{ if(this.source === src) this.source = null; };
+        this.source = src;
+      }
+
       /* ============================= LOOP PANEL SYNC ============================= */
 
       _activeLoop(){ return this.loopSlots[this.activeSlot]; }
@@ -2011,26 +2182,42 @@
 
       _drawRegions(ctx, W, y, h){
         const L = this._activeLoop();
-        const zS = this._timeToX(this.zoneStart);
-        const zE = this._timeToX(this.zoneEnd);
         const lS = this._timeToX(L.start);
         const lE = this._timeToX(L.end);
 
-        // Zone background subtle
         ctx.fillStyle = 'rgba(0,0,0,.10)';
         ctx.fillRect(0, y, W, h);
 
-        // Loop region highlight
-        ctx.fillStyle = 'rgba(242,193,78,.12)';
-        ctx.fillRect(Math.min(lS,lE), y, Math.abs(lE-lS), h);
+        if(this._isPressed(this.loopToggle)){
+          ctx.fillStyle = 'rgba(242,193,78,.12)';
+          ctx.fillRect(Math.min(lS,lE), y, Math.abs(lE-lS), h);
+          ctx.strokeStyle = 'rgba(242,193,78,.45)';
+          ctx.beginPath();
+          ctx.moveTo(lS, y+h);
+          ctx.lineTo(lS + 18, y+h-18);
+          ctx.moveTo(lE-18, y+h-18);
+          ctx.lineTo(lE, y+h);
+          ctx.stroke();
+        }
 
-        // Zero line
+        const mid = y + h/2 + this.viewOffsetY * h;
         ctx.strokeStyle = 'rgba(255,255,255,.22)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(0, y + h/2 + 0.5);
-        ctx.lineTo(W, y + h/2 + 0.5);
+        ctx.moveTo(0, mid + 0.5);
+        ctx.lineTo(W, mid + 0.5);
         ctx.stroke();
+
+        if(this.gridPower && this.gridMode==='auto'){
+          const th = y + h * (0.92 - this.gridThreshold * 0.84);
+          ctx.strokeStyle = 'rgba(87,210,255,.75)';
+          ctx.setLineDash([4,4]);
+          ctx.beginPath();
+          ctx.moveTo(0, th + 0.5);
+          ctx.lineTo(W, th + 0.5);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
       }
 
       _drawWave(ctx, W, y, h){
@@ -2048,7 +2235,7 @@
         const i0 = this._timeToSampleIndex(start);
         const i1 = this._timeToSampleIndex(end);
 
-        const mid = y + h/2;
+        const mid = y + h/2 + this.viewOffsetY * h;
         const amp = (h/2) * 0.92 * this.zoomY;
 
         ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--waveLine');
@@ -2079,7 +2266,7 @@
       _drawMarkers(ctx, W, y, h){
         const L = this._activeLoop();
 
-        const drawLine = (x, color, label)=>{
+        const drawLine = (x, color, label, opts={})=>{
           ctx.strokeStyle = color;
           ctx.lineWidth = 2;
           ctx.beginPath();
@@ -2087,35 +2274,67 @@
           ctx.lineTo(x+0.5, y+h);
           ctx.stroke();
 
-          // top cap
-          ctx.fillStyle = color;
-          ctx.fillRect(x-5, y, 10, 4);
+          if(opts.bottomFlag){
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x, y+h);
+            ctx.lineTo(x-8, y+h-10);
+            ctx.lineTo(x+8, y+h-10);
+            ctx.closePath();
+            ctx.fill();
+          }else{
+            ctx.fillStyle = color;
+            ctx.fillRect(x-5, y, 10, 4);
+          }
 
-          // label bubble
           ctx.font = '11px var(--mono)';
-          ctx.fillStyle = 'rgba(0,0,0,.70)';
-          ctx.strokeStyle = 'rgba(255,255,255,.12)';
           const txt = label;
           const w = ctx.measureText(txt).width + 10;
           const bx = this._clamp(x - w/2, 6, W-w-6);
           const by = y + 6;
 
-          // bubble bg
           ctx.fillStyle = 'rgba(0,0,0,.40)';
           ctx.fillRect(bx, by, w, 18);
+          ctx.strokeStyle = 'rgba(255,255,255,.12)';
           ctx.strokeRect(bx+0.5, by+0.5, w-1, 17);
-
           ctx.fillStyle = color;
           ctx.fillText(txt, bx+5, by+4);
         };
 
-        const zoneColor = getComputedStyle(document.documentElement).getPropertyValue('--markerZone').trim();
+        const zoneStartColor = getComputedStyle(document.documentElement).getPropertyValue('--markerZone').trim();
+        const zoneEndColor = getComputedStyle(document.documentElement).getPropertyValue('--danger').trim();
         const loopColor = getComputedStyle(document.documentElement).getPropertyValue('--markerLoop').trim();
 
-        drawLine(this._timeToX(this.zoneStart), zoneColor, 'Zone Start');
-        drawLine(this._timeToX(this.zoneEnd),   zoneColor, 'Zone End');
+        drawLine(this._timeToX(this.zoneStart), zoneStartColor, 'Zone Start', {bottomFlag:true});
+        drawLine(this._timeToX(this.zoneEnd),   zoneEndColor, 'Zone End');
         drawLine(this._timeToX(L.start), loopColor, 'Loop Start');
         drawLine(this._timeToX(L.end),   loopColor, 'Loop End');
+
+        if(this.gridPower){
+          ctx.font = '11px var(--mono)';
+          for(let i=0;i<this.gridMarkers.length;i++){
+            const x = this._timeToX(this.gridMarkers[i]);
+            ctx.strokeStyle = (i===0) ? 'rgba(87,210,255,.95)' : 'rgba(255,255,255,.45)';
+            ctx.lineWidth = (i===0) ? 2 : 1;
+            ctx.beginPath();
+            ctx.moveTo(x+0.5, y);
+            ctx.lineTo(x+0.5, y+h);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(87,210,255,.95)';
+            ctx.beginPath();
+            ctx.moveTo(x, y+2);
+            ctx.lineTo(x-5, y+11);
+            ctx.lineTo(x+5, y+11);
+            ctx.closePath();
+            ctx.fill();
+
+            if(i===0){
+              ctx.fillStyle = 'rgba(87,210,255,.95)';
+              ctx.fillText('1', x+6, y+5);
+            }
+          }
+        }
       }
 
       /* ============================= HELPERS ============================= */
@@ -2153,6 +2372,7 @@
       _togglePressed(btn){
         const v = !this._isPressed(btn);
         btn.setAttribute('aria-pressed', String(v));
+        this.needsRedraw = true;
       }
       _isPressed(btn){ return btn.getAttribute('aria-pressed') === 'true'; }
 
