@@ -1,0 +1,2224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wave Editor — Sampler Window (Web Audio Prototype)</title>
+  <meta name="color-scheme" content="dark" />
+  <style>
+    /* ============================================================
+       Wave Editor — single-file WebAudio + UI prototype
+       Inspired by classic sampler/wave-editor layouts (Kontakt-like)
+       ------------------------------------------------------------
+       Notes:
+       - No external libs.
+       - Designed to be extended into a full sampler/editor.
+       ============================================================ */
+
+    :root{
+      --bg0:#1a242f;
+      --bg1:#203242;
+      --bg2:#263a4f;
+      --panel:#2b4058;
+      --panel2:#2f4a65;
+      --edge:rgba(255,255,255,.12);
+      --edge2:rgba(0,0,0,.55);
+      --txt:#e7eef7;
+      --muted:rgba(231,238,247,.75);
+      --muted2:rgba(231,238,247,.55);
+      --accent:#f2c14e;          /* warm yellow */
+      --accent2:#39d98a;         /* green */
+      --danger:#ff5757;
+      --waveBG:#6b5a27;          /* brown-ish waveform pane */
+      --waveLine:rgba(255,255,255,.70);
+      --markerZone:#39d98a;
+      --markerLoop:#f2c14e;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 10px;
+      --btnRadius: 6px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family:var(--font);
+      background: radial-gradient(1200px 700px at 35% -10%, #2e4764 0%, #15202a 60%, #0d141b 100%);
+      color:var(--txt);
+      overflow:hidden;
+    }
+
+    /* ---------- App frame ---------- */
+    .app{
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      padding:10px;
+    }
+
+    .chrome{
+      background: linear-gradient(180deg, rgba(58,84,115,.95), rgba(36,56,78,.95));
+      border:1px solid var(--edge);
+      border-bottom-color: rgba(0,0,0,.35);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    /* ---------- Tool bar ---------- */
+    .toolbar{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      background: linear-gradient(180deg, rgba(90,118,150,.45), rgba(26,39,56,.55));
+      border-bottom:1px solid rgba(0,0,0,.35);
+    }
+    .titlePill{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius: 8px;
+      border:1px solid var(--edge);
+      background: linear-gradient(180deg, rgba(18,26,36,.70), rgba(8,12,17,.55));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+      min-width: 140px;
+    }
+    .titlePill b{ font-weight:700; letter-spacing:.2px; }
+    .titlePill .sub{
+      font-size:12px;
+      color:var(--muted2);
+      margin-left:auto;
+    }
+
+    .toolCluster{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .spacer{ flex:1; }
+
+    .btn, .ddBtn{
+      height:28px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:0 10px;
+      border-radius: var(--btnRadius);
+      border:1px solid var(--edge);
+      background: linear-gradient(180deg, rgba(18,26,36,.78), rgba(8,12,17,.62));
+      color: var(--txt);
+      font-size:13px;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.08),
+        0 1px 0 rgba(0,0,0,.35);
+      cursor:pointer;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .btn:hover, .ddBtn:hover{ filter:brightness(1.06); }
+    .btn:active, .ddBtn:active{ transform: translateY(1px); }
+    .btn[aria-pressed="true"], .ddBtn[aria-expanded="true"]{
+      border-color: rgba(242,193,78,.55);
+      box-shadow: inset 0 0 0 1px rgba(242,193,78,.25), 0 1px 0 rgba(0,0,0,.35);
+    }
+    .btn.icon{
+      width:30px;
+      padding:0;
+      font-size:14px;
+    }
+    .btn.danger{
+      border-color: rgba(255,87,87,.45);
+    }
+    .btn.danger:hover{ box-shadow: inset 0 0 0 1px rgba(255,87,87,.25), 0 1px 0 rgba(0,0,0,.35); }
+    .btn.toggle::after{
+      content:"";
+      width:7px;
+      height:7px;
+      border-radius:999px;
+      background: rgba(255,255,255,.18);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.35);
+    }
+    .btn.toggle[aria-pressed="true"]::after{
+      background: var(--accent2);
+      box-shadow: 0 0 12px rgba(57,217,138,.35), inset 0 0 0 1px rgba(0,0,0,.35);
+    }
+    .btn.play{
+      border-color: rgba(57,217,138,.45);
+    }
+
+    .kbdHint{
+      font-size:12px;
+      color:var(--muted2);
+      padding:0 6px;
+    }
+
+    /* ---------- Menus ---------- */
+    .menu{
+      position:fixed;
+      z-index:50;
+      min-width: 250px;
+      border-radius: 10px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(28,36,48,.98), rgba(16,22,30,.98));
+      box-shadow: 0 16px 50px rgba(0,0,0,.55);
+      padding:6px;
+      display:none;
+    }
+    .menu.open{ display:block; }
+    .menu .item{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:8px 10px;
+      border-radius: 8px;
+      cursor:pointer;
+      font-size:13px;
+      color:var(--txt);
+      user-select:none;
+    }
+    .menu .item:hover{ background: rgba(255,255,255,.06); }
+    .menu .item.disabled{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+    .menu .sep{
+      height:1px;
+      background: rgba(255,255,255,.10);
+      margin:6px 6px;
+    }
+    .menu .k{
+      font-family:var(--mono);
+      font-size:12px;
+      color:var(--muted2);
+    }
+    .check{
+      width:18px;
+      text-align:center;
+      color: var(--accent);
+      opacity:.95;
+    }
+
+    /* ---------- Status bar ---------- */
+    .statusbar{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:6px 10px;
+      background: linear-gradient(180deg, rgba(42,62,86,.70), rgba(28,41,58,.70));
+      border-top:1px solid rgba(255,255,255,.06);
+      border-bottom:1px solid rgba(0,0,0,.35);
+      font-size:12px;
+    }
+    .statusbar .label{ color:var(--muted2); }
+    .statusbar .sampleName{
+      font-family:var(--mono);
+      color:var(--txt);
+      max-width: 36vw;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .readouts{
+      margin-left:auto;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      color:var(--muted);
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.20);
+      font-family:var(--mono);
+      font-size:11px;
+    }
+
+    /* ---------- Wave area ---------- */
+    .main{
+      display:flex;
+      gap:10px;
+      padding:10px;
+      background: linear-gradient(180deg, rgba(28,41,58,.65), rgba(18,26,36,.65));
+    }
+
+    .wavePane{
+      position:relative;
+      flex:1;
+      min-height: 320px;
+      border-radius: 8px;
+      border:1px solid rgba(0,0,0,.45);
+      background: linear-gradient(180deg, rgba(122,102,44,.66), rgba(88,72,28,.72));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+      overflow:hidden;
+    }
+    canvas#wave{
+      width:100%;
+      height:100%;
+      display:block;
+    }
+    .cornerTag{
+      position:absolute;
+      bottom:8px;
+      left:8px;
+      font-family:var(--mono);
+      font-size:12px;
+      color: rgba(0,0,0,.85);
+      background: rgba(57,217,138,.9);
+      border:1px solid rgba(0,0,0,.40);
+      border-radius:6px;
+      padding:2px 6px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.25);
+    }
+
+    .hintOverlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      pointer-events:none;
+      color: rgba(255,255,255,.85);
+      text-align:center;
+      padding:18px;
+      opacity:.0;
+      transition: opacity .2s ease;
+      text-shadow: 0 2px 18px rgba(0,0,0,.65);
+    }
+    .hintOverlay.show{ opacity:1; }
+    .hintOverlay .card{
+      max-width: 520px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.35);
+      backdrop-filter: blur(8px);
+      padding:14px 16px;
+    }
+    .hintOverlay .card b{ color: var(--accent); }
+    .hintOverlay .small{
+      margin-top:8px;
+      font-size:12px;
+      color: rgba(255,255,255,.70);
+      line-height:1.4;
+    }
+
+    /* Right-side mini controls (vertical zoom + quick actions) */
+    .sideStrip{
+      width:42px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      align-items:stretch;
+    }
+    .stripBtn{
+      height:32px;
+      border-radius: 8px;
+      border:1px solid var(--edge);
+      background: linear-gradient(180deg, rgba(18,26,36,.78), rgba(8,12,17,.62));
+      color: var(--txt);
+      cursor:pointer;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+      display:grid;
+      place-items:center;
+      user-select:none;
+    }
+    .stripBtn:hover{ filter:brightness(1.06); }
+    .stripBtn:active{ transform: translateY(1px); }
+    .stripBtn.small{
+      height:28px;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    /* ---------- Lower tabs ---------- */
+    .lower{
+      display:flex;
+      gap:10px;
+      padding:10px;
+      border-top:1px solid rgba(0,0,0,.35);
+      background: linear-gradient(180deg, rgba(46,70,98,.60), rgba(34,52,74,.60));
+    }
+    .tabsWrap{
+      flex:1;
+      min-width: 520px;
+    }
+    .tabs{
+      display:flex;
+      align-items:flex-end;
+      gap:6px;
+      margin-bottom:8px;
+      flex-wrap:wrap;
+    }
+    .tab{
+      padding:7px 10px;
+      border-radius: 9px 9px 0 0;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.20);
+      color: var(--muted);
+      cursor:pointer;
+      user-select:none;
+      font-size:13px;
+    }
+    .tab.active{
+      background: linear-gradient(180deg, rgba(0,0,0,.30), rgba(0,0,0,.15));
+      color: var(--txt);
+      border-bottom-color: rgba(0,0,0,.0);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+    }
+
+    .panel{
+      border:1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(26,39,56,.55), rgba(18,26,36,.55));
+      border-radius: 0 12px 12px 12px;
+      padding:10px;
+      min-height: 120px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    }
+
+    /* Sample Loop panel layout */
+    .loopGrid{
+      display:grid;
+      grid-template-columns: 250px 1fr;
+      gap:10px;
+    }
+    .loopSlots{
+      display:grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap:6px;
+      align-content:start;
+    }
+    .slot{
+      height:34px;
+      border-radius: 8px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      color: var(--muted);
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family:var(--mono);
+      user-select:none;
+    }
+    .slot.active{
+      color: #0b1016;
+      background: linear-gradient(180deg, rgba(242,193,78,.95), rgba(242,193,78,.70));
+      border-color: rgba(0,0,0,.35);
+      box-shadow: 0 10px 18px rgba(0,0,0,.25);
+    }
+    .slot:hover{ filter:brightness(1.05); }
+
+    .loopControls{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:8px;
+      align-items:start;
+    }
+    .field{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
+      padding:8px;
+      background: rgba(0,0,0,.18);
+    }
+    .field .lbl{
+      font-size:12px;
+      color: var(--muted2);
+      margin-bottom:6px;
+    }
+    .field .row{
+      display:flex;
+      gap:6px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .num{
+      width: 120px;
+      height: 28px;
+      border-radius: 8px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.30);
+      color: var(--txt);
+      padding: 0 8px;
+      font-family: var(--mono);
+      font-size: 12px;
+      outline:none;
+    }
+    .num:focus{ border-color: rgba(242,193,78,.55); box-shadow: 0 0 0 3px rgba(242,193,78,.15); }
+    .select{
+      height: 28px;
+      border-radius: 8px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.30);
+      color: var(--txt);
+      padding: 0 8px;
+      font-family: var(--font);
+      outline:none;
+    }
+
+    /* Grid panel */
+    .gridPanel{
+      width: 280px;
+      min-width: 260px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius: 12px;
+      padding:10px;
+      background: linear-gradient(180deg, rgba(26,39,56,.55), rgba(18,26,36,.55));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .gridPanel h3{
+      margin:0 0 10px 0;
+      font-size:13px;
+      color: var(--txt);
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .gridPanel .gRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+      font-size:12px;
+      color: var(--muted);
+    }
+    .miniToggle{
+      height:28px;
+      padding:0 10px;
+      border-radius: 8px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      color: var(--muted);
+      cursor:pointer;
+    }
+    .miniToggle[aria-pressed="true"]{ color: var(--txt); border-color: rgba(57,217,138,.45); }
+
+    /* ---------- Toast ---------- */
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      z-index:60;
+      background: rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.16);
+      color: rgba(255,255,255,.92);
+      padding:10px 12px;
+      border-radius: 12px;
+      box-shadow: 0 16px 50px rgba(0,0,0,.55);
+      backdrop-filter: blur(8px);
+      font-size:13px;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .toast.show{
+      opacity:1;
+      transform:translateX(-50%) translateY(-4px);
+    }
+    .toast b{ color: var(--accent); }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 980px){
+      body{ overflow:auto; }
+      .app{ overflow:auto; }
+      .main{ flex-direction:column; }
+      .sideStrip{ width:100%; flex-direction:row; }
+      .gridPanel{ width:100%; }
+      .tabsWrap{ min-width:unset; }
+      .loopGrid{ grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="chrome" id="chrome">
+      <!-- ============================ TOOL BAR ============================ -->
+      <div class="toolbar">
+        <div class="titlePill">
+          <b>Wave Editor</b>
+          <span class="sub" id="externalTag" style="display:none;">external</span>
+        </div>
+
+        <!-- External window size dropdown (only visible in "external" mode) -->
+        <button class="ddBtn" id="sizeBtn" style="display:none;" aria-haspopup="menu" aria-expanded="false" title="Window size (external only)">
+          Size ▾
+        </button>
+
+        <div class="toolCluster" aria-label="navigation and edit tools">
+          <!-- Magnify Tool -->
+          <button class="btn icon toggle" id="magnifyBtn" aria-pressed="false" title="Magnify Tool (or hold Alt) — drag to zoom, click to zoom out">🔍</button>
+
+          <!-- Jump buttons (zone/loop) -->
+          <button class="btn icon" id="jumpZoneStart" title="Jump to Zone Start">⟸</button>
+          <button class="btn icon" id="jumpLoopStart" title="Jump to Loop Start">⟵</button>
+          <button class="btn icon" id="zoomOnLoop" title="Zoom on Loop">⤢</button>
+          <button class="btn icon" id="jumpLoopEnd" title="Jump to Loop End">⟶</button>
+          <button class="btn icon" id="jumpZoneEnd" title="Jump to Zone End">⟹</button>
+
+          <!-- Snap menu -->
+          <button class="ddBtn" id="snapBtn" aria-haspopup="menu" aria-expanded="false" title="Snap options">
+            Snap ▾
+          </button>
+
+          <!-- Command menu (cog) -->
+          <button class="ddBtn" id="cmdBtn" aria-haspopup="menu" aria-expanded="false" title="Command Menu">
+            ⚙ ▾
+          </button>
+
+          <span class="kbdHint">Tip: Drag markers • <b>Alt</b> = magnify</span>
+        </div>
+
+        <div class="spacer"></div>
+
+        <!-- Playback controls -->
+        <div class="toolCluster" aria-label="playback controls">
+          <button class="btn icon danger" id="stopBtn" title="Stop">⏹</button>
+          <button class="btn toggle" id="loopToggle" aria-pressed="false" title="Loop (Play repeats the selected loop region)">Loop</button>
+          <button class="btn icon play" id="playBtn" title="Play">▶</button>
+          <button class="btn toggle" id="autoPrelisten" aria-pressed="false" title="Auto Pre-Listen (plays region when changed)">Auto</button>
+
+          <!-- External editor menu -->
+          <button class="ddBtn" id="extBtn" aria-haspopup="menu" aria-expanded="false" title="External editor actions">
+            Ext. Editor ▾
+          </button>
+
+          <!-- Utility: pop out + load -->
+          <button class="btn" id="popOutBtn" title="Open this Wave Editor in an external window (shows Size menu)">Pop Out</button>
+          <button class="btn" id="loadBtn" title="Load an audio file (wav/mp3/ogg)">Load…</button>
+          <input id="fileInput" type="file" accept="audio/*" hidden />
+        </div>
+      </div>
+
+      <!-- ============================ STATUS BAR ============================ -->
+      <div class="statusbar">
+        <span class="label">Sample:</span>
+        <span class="sampleName" id="sampleName">Demo: Trumpet-f-C1-D#1 (generated)</span>
+
+        <div class="readouts" aria-label="zone readouts">
+          <span class="pill">S.Start <span id="roSStart">0</span></span>
+          <span class="pill">S.Mod <span id="roSMod">0</span></span>
+          <span class="pill">S.End <span id="roSEnd">0</span></span>
+          <span class="pill">Fmt <span id="roFmt">48000 • 24</span></span>
+          <span class="pill">Len <span id="roLen">0.00s</span></span>
+        </div>
+      </div>
+
+      <!-- ============================ MAIN (WAVEFORM) ============================ -->
+      <div class="main">
+        <div class="wavePane" id="wavePane" role="application" aria-label="waveform view">
+          <canvas id="wave"></canvas>
+
+          <div class="cornerTag">OP 1 ▶</div>
+
+          <div class="hintOverlay" id="hint">
+            <div class="card">
+              <div><b>Drop a file</b> here to load it (WAV/MP3/OGG).</div>
+              <div class="small">
+                Markers: <span style="color:var(--markerZone)">Zone</span> (green), <span style="color:var(--markerLoop)">Loop</span> (yellow).<br/>
+                <b>Magnify</b>: toggle 🔍 or hold <b>Alt</b>, drag a frame to zoom; click to zoom out.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sideStrip" aria-label="zoom and view controls">
+          <div class="stripBtn" id="zoomYPlus" title="Increase vertical zoom">＋</div>
+          <div class="stripBtn" id="zoomYMinus" title="Decrease vertical zoom">－</div>
+          <div class="stripBtn small" id="fitY" title="Fit vertical zoom">FIT</div>
+          <div class="stripBtn small" id="zoomIn" title="Zoom in (horizontal)">ZOOM+</div>
+          <div class="stripBtn small" id="zoomOut" title="Zoom out (horizontal)">ZOOM−</div>
+        </div>
+      </div>
+
+      <!-- ============================ LOWER (TABS + GRID PANEL) ============================ -->
+      <div class="lower">
+        <div class="tabsWrap">
+          <div class="tabs" role="tablist" aria-label="wave editor tabs">
+            <div class="tab active" data-tab="loop" role="tab" aria-selected="true">Sample Loop</div>
+            <div class="tab" data-tab="sync" role="tab" aria-selected="false">Sync / Slice</div>
+            <div class="tab" data-tab="env" role="tab" aria-selected="false">Zone Envelopes</div>
+            <div class="tab" data-tab="edit" role="tab" aria-selected="false">Sample Editor</div>
+          </div>
+
+          <div class="panel" id="panelLoop">
+            <div class="loopGrid">
+              <div class="loopSlots" aria-label="loop slot selection">
+                <div class="slot active" data-slot="0">1</div>
+                <div class="slot" data-slot="1">2</div>
+                <div class="slot" data-slot="2">3</div>
+                <div class="slot" data-slot="3">4</div>
+                <div class="slot" data-slot="4">5</div>
+                <div class="slot" data-slot="5">6</div>
+                <div class="slot" data-slot="6">7</div>
+                <div class="slot" data-slot="7">8</div>
+              </div>
+
+              <div class="loopControls">
+                <div class="field">
+                  <div class="lbl">Loop Start</div>
+                  <div class="row">
+                    <input class="num" id="loopStartSamples" inputmode="numeric" value="0" title="Loop Start (samples)" />
+                    <button class="btn icon" id="nudgeLoopStartMinus" title="Nudge -1 sample">−</button>
+                    <button class="btn icon" id="nudgeLoopStartPlus" title="Nudge +1 sample">+</button>
+                  </div>
+                  <div class="small" style="margin-top:6px;color:var(--muted2);font-family:var(--mono);">
+                    t=<span id="loopStartTime">0.000s</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <div class="lbl">Loop End</div>
+                  <div class="row">
+                    <input class="num" id="loopEndSamples" inputmode="numeric" value="0" title="Loop End (samples)" />
+                    <button class="btn icon" id="nudgeLoopEndMinus" title="Nudge -1 sample">−</button>
+                    <button class="btn icon" id="nudgeLoopEndPlus" title="Nudge +1 sample">+</button>
+                  </div>
+                  <div class="small" style="margin-top:6px;color:var(--muted2);font-family:var(--mono);">
+                    t=<span id="loopEndTime">0.000s</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <div class="lbl">X-Fade / Mode</div>
+                  <div class="row">
+                    <input class="num" id="xfadeSamples" inputmode="numeric" value="0" title="Crossfade (samples)" />
+                    <select class="select" id="loopMode">
+                      <option value="untilEnd">until end</option>
+                      <option value="oneShot">one-shot</option>
+                      <option value="pingPong">ping-pong</option>
+                    </select>
+                  </div>
+                  <div class="small" style="margin-top:6px;color:var(--muted2);">
+                    Drag the yellow loop markers in the waveform view.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" id="panelOther" style="display:none;">
+            <div style="color:var(--muted); font-size:13px; line-height:1.35;">
+              This tab is a placeholder in this first build. Next iterations can add slicing/grid markers,
+              envelope editors, and destructive sample edits.
+            </div>
+          </div>
+        </div>
+
+        <aside class="gridPanel" aria-label="grid panel">
+          <h3>🧭 Grid</h3>
+          <div class="gRow">
+            <span>Width</span>
+            <div class="row" style="gap:6px;">
+              <button class="btn icon" id="gridMinus" title="Decrease grid width">−</button>
+              <span class="pill" id="gridWidthPill">1/1</span>
+              <button class="btn icon" id="gridPlus" title="Increase grid width">+</button>
+            </div>
+          </div>
+          <div class="gRow">
+            <span>Mode</span>
+            <div class="row" style="gap:6px;">
+              <button class="miniToggle" id="gridFix" aria-pressed="false">Fix</button>
+              <button class="miniToggle" id="gridAuto" aria-pressed="true">Auto</button>
+            </div>
+          </div>
+          <div class="gRow">
+            <span>BPM</span>
+            <span class="pill" id="bpmPill">126.32</span>
+          </div>
+          <div class="gRow">
+            <span>Signature</span>
+            <span class="pill" id="sigPill">4/4</span>
+          </div>
+
+          <div style="margin-top:12px; font-size:12px; color:var(--muted2); line-height:1.35;">
+            Grid/slicing is scaffolded here for later. In this build, the waveform view focuses on
+            <b>loop</b> + <b>zone</b> markers, snapping, magnify zoom, and transport.
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menus -->
+  <div class="menu" id="snapMenu" role="menu" aria-label="snap menu"></div>
+  <div class="menu" id="cmdMenu" role="menu" aria-label="command menu"></div>
+  <div class="menu" id="extMenu" role="menu" aria-label="external editor menu"></div>
+  <div class="menu" id="sizeMenu" role="menu" aria-label="size menu"></div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    /* ============================================================
+       Wave Editor Prototype — WebAudio + Canvas + UI
+       ------------------------------------------------------------
+       What you can do in this build:
+       - Load audio (drop or Load…)
+       - Drag Zone/Loop markers
+       - Magnify tool: drag to zoom (Alt or toggle)
+       - Jump/zoom buttons for Zone/Loop
+       - Snap options (zero crossing / value crossing)
+       - Command menu utilities (find loop end, DC removal, etc.)
+       - Transport: Play/Stop, Loop, Auto Pre-Listen
+       ------------------------------------------------------------
+       Extension points (later):
+       - Multiple zones, slicing/grid markers
+       - Envelope editors
+       - Destructive trims, fades, normalize, etc.
+       ============================================================ */
+
+    class WaveEditorApp {
+      constructor(){
+        // ---- DOM
+        this.canvas = document.querySelector('#wave');
+        this.ctx2d = this.canvas.getContext('2d', { alpha: true });
+        this.wavePane = document.querySelector('#wavePane');
+        this.hint = document.querySelector('#hint');
+        this.toastEl = document.querySelector('#toast');
+
+        // Toolbar buttons
+        this.magnifyBtn = document.querySelector('#magnifyBtn');
+        this.jumpZoneStartBtn = document.querySelector('#jumpZoneStart');
+        this.jumpZoneEndBtn = document.querySelector('#jumpZoneEnd');
+        this.jumpLoopStartBtn = document.querySelector('#jumpLoopStart');
+        this.jumpLoopEndBtn = document.querySelector('#jumpLoopEnd');
+        this.zoomOnLoopBtn = document.querySelector('#zoomOnLoop');
+        this.snapBtn = document.querySelector('#snapBtn');
+        this.cmdBtn = document.querySelector('#cmdBtn');
+        this.extBtn = document.querySelector('#extBtn');
+        this.sizeBtn = document.querySelector('#sizeBtn');
+        this.popOutBtn = document.querySelector('#popOutBtn');
+        this.loadBtn = document.querySelector('#loadBtn');
+        this.fileInput = document.querySelector('#fileInput');
+
+        this.stopBtn = document.querySelector('#stopBtn');
+        this.playBtn = document.querySelector('#playBtn');
+        this.loopToggle = document.querySelector('#loopToggle');
+        this.autoPrelisten = document.querySelector('#autoPrelisten');
+
+        // Side strip
+        this.zoomYPlus = document.querySelector('#zoomYPlus');
+        this.zoomYMinus = document.querySelector('#zoomYMinus');
+        this.fitYBtn = document.querySelector('#fitY');
+        this.zoomInBtn = document.querySelector('#zoomIn');
+        this.zoomOutBtn = document.querySelector('#zoomOut');
+
+        // Status readouts
+        this.sampleNameEl = document.querySelector('#sampleName');
+        this.roSStart = document.querySelector('#roSStart');
+        this.roSMod = document.querySelector('#roSMod');
+        this.roSEnd = document.querySelector('#roSEnd');
+        this.roFmt = document.querySelector('#roFmt');
+        this.roLen = document.querySelector('#roLen');
+
+        // Loop panel
+        this.slotEls = Array.from(document.querySelectorAll('.slot'));
+        this.loopStartSamplesEl = document.querySelector('#loopStartSamples');
+        this.loopEndSamplesEl = document.querySelector('#loopEndSamples');
+        this.loopStartTimeEl = document.querySelector('#loopStartTime');
+        this.loopEndTimeEl = document.querySelector('#loopEndTime');
+        this.xfadeSamplesEl = document.querySelector('#xfadeSamples');
+        this.loopModeEl = document.querySelector('#loopMode');
+
+        this.nudgeLoopStartMinus = document.querySelector('#nudgeLoopStartMinus');
+        this.nudgeLoopStartPlus  = document.querySelector('#nudgeLoopStartPlus');
+        this.nudgeLoopEndMinus   = document.querySelector('#nudgeLoopEndMinus');
+        this.nudgeLoopEndPlus    = document.querySelector('#nudgeLoopEndPlus');
+
+        // Tabs
+        this.tabEls = Array.from(document.querySelectorAll('.tab'));
+        this.panelLoop = document.querySelector('#panelLoop');
+        this.panelOther = document.querySelector('#panelOther');
+
+        // Menus
+        this.snapMenu = document.querySelector('#snapMenu');
+        this.cmdMenu = document.querySelector('#cmdMenu');
+        this.extMenu = document.querySelector('#extMenu');
+        this.sizeMenu = document.querySelector('#sizeMenu');
+        this.externalTag = document.querySelector('#externalTag');
+
+        // ---- Audio state
+        this.audioCtx = null;
+        this.buffer = null;          // AudioBuffer
+        this.mono = null;            // Float32Array (mono mixdown)
+        this.sampleRate = 48000;
+        this.bitDepth = 24;          // display only
+        this.source = null;
+        this.masterGain = null;
+
+        // ---- Editor state
+        this.zoomY = 1.0;
+        this.viewStart = 0;
+        this.viewEnd = 3.8;
+        this.zoomStack = [];         // zoom-out history
+
+        this.zoneStart = 0;
+        this.zoneEnd = 3.8;
+
+        this.loopSlots = Array.from({length:8}, (_,i)=>({
+          start: 0.0,
+          end: 1.0,
+          xfade: 0,
+          mode: 'untilEnd'
+        }));
+        this.activeSlot = 0;
+
+        // Snapping options
+        this.snapLoopMode = 'none';      // 'none' | 'zero' | 'value'
+        this.snapSampleToZero = false;
+
+        // Magnify tool
+        this.magnify = false;
+
+        // Dragging / interactions
+        this.drag = null;   // {type:'zoneStart'|'zoneEnd'|'loopStart'|'loopEnd'|'frame', startX, ...}
+        this.pointerDown = false;
+
+        // Derived drawing caches
+        this.resizeObserver = null;
+        this.needsRedraw = true;
+
+        // External window mode?
+        this.isExternal = new URLSearchParams(location.search).get('external') === '1';
+
+        // ---- init
+        this._initUI();
+        this._initCanvas();
+        this._initAudioDemo();
+        this._renderLoopPanel();
+        this._syncReadouts();
+        this._tick();
+      }
+
+      /* ============================= INIT ============================= */
+
+      _initUI(){
+        // External indicator + Size menu
+        if(this.isExternal){
+          this.externalTag.style.display = '';
+          this.sizeBtn.style.display = '';
+          this.popOutBtn.style.display = 'none';
+        }
+
+        // Menus (snap, cmd, ext, size)
+        this._buildSnapMenu();
+        this._buildCmdMenu();
+        this._buildExtMenu();
+        this._buildSizeMenu();
+
+        // Close menus on outside click
+        window.addEventListener('pointerdown', (e)=>{
+          if(!e.target.closest('.menu') && !e.target.closest('.ddBtn')) this._closeAllMenus();
+        });
+
+        // Toolbar interactions
+        this.magnifyBtn.addEventListener('click', ()=>this._toggleMagnify());
+        this.jumpZoneStartBtn.addEventListener('click', ()=>this._jumpTo('zoneStart'));
+        this.jumpZoneEndBtn.addEventListener('click', ()=>this._jumpTo('zoneEnd'));
+        this.jumpLoopStartBtn.addEventListener('click', ()=>this._jumpTo('loopStart'));
+        this.jumpLoopEndBtn.addEventListener('click', ()=>this._jumpTo('loopEnd'));
+        this.zoomOnLoopBtn.addEventListener('click', ()=>this._zoomOnLoop());
+
+        this.snapBtn.addEventListener('click', ()=>this._toggleMenu(this.snapBtn, this.snapMenu));
+        this.cmdBtn.addEventListener('click', ()=>this._toggleMenu(this.cmdBtn, this.cmdMenu));
+        this.extBtn.addEventListener('click', ()=>this._toggleMenu(this.extBtn, this.extMenu));
+        this.sizeBtn.addEventListener('click', ()=>this._toggleMenu(this.sizeBtn, this.sizeMenu));
+
+        this.stopBtn.addEventListener('click', ()=>this.stop());
+        this.playBtn.addEventListener('click', ()=>this.play());
+        this.loopToggle.addEventListener('click', ()=>this._togglePressed(this.loopToggle));
+        this.autoPrelisten.addEventListener('click', ()=>this._togglePressed(this.autoPrelisten));
+
+        this.popOutBtn.addEventListener('click', ()=>this._popOut());
+        this.loadBtn.addEventListener('click', ()=>this.fileInput.click());
+        this.fileInput.addEventListener('change', (e)=>{
+          const f = e.target.files && e.target.files[0];
+          if(f) this.loadFile(f);
+          e.target.value = '';
+        });
+
+        // Side strip
+        this.zoomYPlus.addEventListener('click', ()=>{ this.zoomY = Math.min(10, this.zoomY*1.25); this.needsRedraw=true; });
+        this.zoomYMinus.addEventListener('click', ()=>{ this.zoomY = Math.max(0.2, this.zoomY/1.25); this.needsRedraw=true; });
+        this.fitYBtn.addEventListener('click', ()=>{ this.zoomY = 1.0; this.needsRedraw=true; });
+
+        this.zoomInBtn.addEventListener('click', ()=>this._zoomAround((this.viewStart+this.viewEnd)/2, 0.6));
+        this.zoomOutBtn.addEventListener('click', ()=>this._zoomOutOne());
+
+        // Loop panel: slots
+        this.slotEls.forEach(el=>{
+          el.addEventListener('click', ()=>{
+            const idx = Number(el.dataset.slot);
+            this.activeSlot = idx;
+            this.slotEls.forEach(s=>s.classList.toggle('active', Number(s.dataset.slot)===idx));
+            this._renderLoopPanel();
+            this.needsRedraw = true;
+            if(this._isPressed(this.autoPrelisten)) this._prelistenLoop();
+          });
+        });
+
+        // Loop panel: numeric inputs
+        const onNum = (el, cb)=>{
+          el.addEventListener('change', ()=>{
+            const n = Number(el.value);
+            if(Number.isFinite(n)) cb(n);
+          });
+        };
+
+        onNum(this.loopStartSamplesEl, (n)=>this._setLoopStartSamples(n));
+        onNum(this.loopEndSamplesEl, (n)=>this._setLoopEndSamples(n));
+        onNum(this.xfadeSamplesEl, (n)=>{
+          this._activeLoop().xfade = Math.max(0, Math.floor(n));
+          this._renderLoopPanel();
+        });
+        this.loopModeEl.addEventListener('change', ()=>{
+          this._activeLoop().mode = this.loopModeEl.value;
+          this._renderLoopPanel();
+        });
+
+        // Nudges
+        this.nudgeLoopStartMinus.addEventListener('click', ()=>this._nudgeLoop('start', -1));
+        this.nudgeLoopStartPlus.addEventListener('click', ()=>this._nudgeLoop('start', +1));
+        this.nudgeLoopEndMinus.addEventListener('click', ()=>this._nudgeLoop('end', -1));
+        this.nudgeLoopEndPlus.addEventListener('click', ()=>this._nudgeLoop('end', +1));
+
+        // Tabs switch (placeholder)
+        this.tabEls.forEach(t=>{
+          t.addEventListener('click', ()=>{
+            this.tabEls.forEach(x=>x.classList.remove('active'));
+            t.classList.add('active');
+            const which = t.dataset.tab;
+            if(which==='loop'){
+              this.panelLoop.style.display = '';
+              this.panelOther.style.display = 'none';
+            }else{
+              this.panelLoop.style.display = 'none';
+              this.panelOther.style.display = '';
+              this.panelOther.innerHTML = `<div style="color:var(--muted); font-size:13px; line-height:1.35;">
+                <b>${t.textContent}</b> is a scaffold in this first build. Add features here in the next iteration.
+              </div>`;
+            }
+          });
+        });
+
+        // Drag & drop loading
+        ['dragenter','dragover'].forEach(evt=>{
+          this.wavePane.addEventListener(evt, (e)=>{
+            e.preventDefault();
+            this.hint.classList.add('show');
+          });
+        });
+        ['dragleave','drop'].forEach(evt=>{
+          this.wavePane.addEventListener(evt, (e)=>{
+            e.preventDefault();
+            this.hint.classList.remove('show');
+          });
+        });
+        this.wavePane.addEventListener('drop', (e)=>{
+          const f = e.dataTransfer.files && e.dataTransfer.files[0];
+          if(f) this.loadFile(f);
+        });
+
+        // Show hint initially
+        setTimeout(()=>this.hint.classList.add('show'), 120);
+        setTimeout(()=>this.hint.classList.remove('show'), 2600);
+
+        // Keyboard shortcuts
+        window.addEventListener('keydown', (e)=>{
+          if(e.code === 'Space'){
+            e.preventDefault();
+            this.play();
+          }
+          if(e.code === 'Escape'){
+            this.stop();
+            this._closeAllMenus();
+          }
+        });
+      }
+
+      _initCanvas(){
+        const resize = ()=>{
+          const r = this.wavePane.getBoundingClientRect();
+          const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+          this.canvas.width = Math.floor(r.width * dpr);
+          this.canvas.height = Math.floor(r.height * dpr);
+          this.ctx2d.setTransform(dpr,0,0,dpr,0,0);
+          this.needsRedraw = true;
+        };
+        this.resizeObserver = new ResizeObserver(resize);
+        this.resizeObserver.observe(this.wavePane);
+        window.addEventListener('resize', resize, {passive:true});
+        resize();
+
+        // Pointer interactions on waveform view
+        this.wavePane.addEventListener('pointerdown', (e)=>this._onPointerDown(e));
+        window.addEventListener('pointermove', (e)=>this._onPointerMove(e));
+        window.addEventListener('pointerup', (e)=>this._onPointerUp(e));
+      }
+
+      _initAudioDemo(){
+        // Create a synthetic buffer (so the UI works immediately)
+        this.sampleRate = 48000;
+        const dur = 3.8;
+        const len = Math.floor(this.sampleRate * dur);
+        const ch = new Float32Array(len);
+
+        // A "trumpet-ish" harmonic stack with decay + gentle noise
+        for(let i=0;i<len;i++){
+          const t = i/this.sampleRate;
+          const env = Math.exp(-t*1.4) * (0.75 + 0.25*Math.sin(2*Math.PI*3*t));
+          let s = 0;
+          const f0 = 261.63; // ~C4
+          for(let h=1; h<=10; h++){
+            const amp = (1/h) * (h%2?1:0.7);
+            s += amp * Math.sin(2*Math.PI*f0*h*t + (h*0.13));
+          }
+          const noise = (Math.random()*2-1) * 0.02;
+          ch[i] = (s*0.14 + noise) * env;
+        }
+
+        this.mono = ch;
+        this.buffer = this._toAudioBuffer(ch, this.sampleRate);
+        this.sampleNameEl.textContent = 'Demo: Trumpet-f-C1-D#1 (generated)';
+
+        this.zoneStart = 0;
+        this.zoneEnd = dur;
+        this.viewStart = 0;
+        this.viewEnd = dur;
+        // Default loop (like screenshot: loop end at end of sample)
+        this.loopSlots[0].start = 0;
+        this.loopSlots[0].end = dur;
+        this._renderLoopPanel();
+        this._syncReadouts();
+      }
+
+      async _ensureAudio(){
+        if(this.audioCtx) return;
+        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        this.masterGain = this.audioCtx.createGain();
+        this.masterGain.gain.value = 0.9;
+        this.masterGain.connect(this.audioCtx.destination);
+      }
+
+      /* ============================= FILE LOAD ============================= */
+
+      async loadFile(file){
+        try{
+          await this._ensureAudio();
+          const arrayBuf = await file.arrayBuffer();
+          const decoded = await this.audioCtx.decodeAudioData(arrayBuf);
+          this.buffer = decoded;
+          this.sampleRate = decoded.sampleRate;
+
+          // Mixdown to mono for drawing/analysis
+          const ch0 = decoded.getChannelData(0);
+          const ch1 = decoded.numberOfChannels > 1 ? decoded.getChannelData(1) : null;
+          const mono = new Float32Array(ch0.length);
+          if(ch1){
+            for(let i=0;i<mono.length;i++) mono[i] = 0.5*(ch0[i] + ch1[i]);
+          }else{
+            mono.set(ch0);
+          }
+          this.mono = mono;
+
+          const dur = decoded.duration;
+          this.zoneStart = 0;
+          this.zoneEnd = dur;
+          this.viewStart = 0;
+          this.viewEnd = dur;
+
+          // Set a sane loop default (last 60% or 1s min)
+          const minLoop = Math.min(1.0, dur);
+          this.loopSlots[this.activeSlot].start = Math.min(0.1, dur*0.05);
+          this.loopSlots[this.activeSlot].end = Math.max(this.loopSlots[this.activeSlot].start + minLoop, dur*0.65);
+          this.loopSlots[this.activeSlot].end = Math.min(this.loopSlots[this.activeSlot].end, dur);
+
+          this.sampleNameEl.textContent = file.name;
+          this._syncReadouts();
+          this._renderLoopPanel();
+          this.needsRedraw = true;
+
+          this._toast(`Loaded <b>${this._escape(file.name)}</b>`);
+        }catch(err){
+          console.error(err);
+          this._toast(`Could not load file. Try WAV/MP3/OGG.`, true);
+        }
+      }
+
+      /* ============================= MENUS ============================= */
+
+      _toggleMenu(btn, menu){
+        const open = menu.classList.contains('open');
+        this._closeAllMenus();
+        if(!open){
+          btn.setAttribute('aria-expanded','true');
+          const r = btn.getBoundingClientRect();
+          menu.style.left = Math.round(r.left) + 'px';
+          menu.style.top  = Math.round(r.bottom + 6) + 'px';
+          menu.classList.add('open');
+        }
+      }
+      _closeAllMenus(){
+        [this.snapMenu, this.cmdMenu, this.extMenu, this.sizeMenu].forEach(m=>m.classList.remove('open'));
+        [this.snapBtn, this.cmdBtn, this.extBtn, this.sizeBtn].forEach(b=>{
+          if(b) b.setAttribute('aria-expanded','false');
+        });
+      }
+
+      _buildSnapMenu(){
+        const mk = (label, key, right='')=>{
+          const div = document.createElement('div');
+          div.className = 'item';
+          div.innerHTML = `<span style="display:flex;align-items:center;gap:10px;">
+              <span class="check" data-check="${key}"></span>
+              <span>${label}</span>
+            </span>
+            <span class="k">${right}</span>`;
+          div.addEventListener('click', ()=>{
+            if(key==='loop:none'){
+              this.snapLoopMode = 'none';
+            }else if(key==='loop:zero'){
+              this.snapLoopMode = 'zero';
+            }else if(key==='loop:value'){
+              this.snapLoopMode = 'value';
+            }else if(key==='sample:zero'){
+              this.snapSampleToZero = !this.snapSampleToZero;
+            }
+            this._refreshSnapChecks();
+          });
+          return div;
+        };
+
+        this.snapMenu.innerHTML = '';
+        this.snapMenu.appendChild(mk('Snap loop to zero crossing', 'loop:zero'));
+        this.snapMenu.appendChild(mk('Snap loop to value crossing', 'loop:value'));
+        this.snapMenu.appendChild(mk('No loop snap', 'loop:none'));
+        this.snapMenu.appendChild(Object.assign(document.createElement('div'), {className:'sep'}));
+        this.snapMenu.appendChild(mk('Snap sample start/end to zero crossing', 'sample:zero'));
+        this._refreshSnapChecks();
+      }
+
+      _refreshSnapChecks(){
+        // Loop checks: exclusive
+        const loopKeys = ['loop:zero','loop:value','loop:none'];
+        loopKeys.forEach(k=>{
+          const el = this.snapMenu.querySelector(`[data-check="${k}"]`);
+          if(!el) return;
+          const mode = (k==='loop:zero'?'zero':k==='loop:value'?'value':'none');
+          el.textContent = (this.snapLoopMode === mode) ? '✓' : '';
+        });
+
+        // Sample check: independent
+        const s = this.snapMenu.querySelector(`[data-check="sample:zero"]`);
+        if(s) s.textContent = this.snapSampleToZero ? '✓' : '';
+      }
+
+      _buildCmdMenu(){
+        const add = (label, fn, opts={})=>{
+          const div = document.createElement('div');
+          div.className = 'item' + (opts.disabled?' disabled':'');
+          div.innerHTML = `<span>${label}</span><span class="k">${opts.k||''}</span>`;
+          if(!opts.disabled){
+            div.addEventListener('click', ()=>{
+              this._closeAllMenus();
+              fn();
+            });
+          }
+          this.cmdMenu.appendChild(div);
+        };
+        const sep = ()=>this.cmdMenu.appendChild(Object.assign(document.createElement('div'), {className:'sep'}));
+
+        this.cmdMenu.innerHTML = '';
+        add('Find loop end (short)', ()=>this._findLoopEnd({mode:'short'}));
+        add('Find loop end (long)',  ()=>this._findLoopEnd({mode:'long'}));
+        sep();
+        add('Restore loops from sample', ()=>this._restoreLoopsFromSample());
+        add('Reveal sample in Finder/Explorer…', ()=>this._toast('Not available in a browser sandbox.'));
+        sep();
+        // Submenu scaffold (disabled in web prototype)
+        add('To all selected zones  ▶', ()=>{}, {disabled:true});
+        sep();
+        add('Adjust Loop Starts +1', ()=>this._nudgeLoop('start', +1), {k:'samples'});
+        add('Adjust Loop Starts -1', ()=>this._nudgeLoop('start', -1), {k:'samples'});
+        add('Adjust Loop Ends +1',   ()=>this._nudgeLoop('end', +1), {k:'samples'});
+        add('Adjust Loop Ends -1',   ()=>this._nudgeLoop('end', -1), {k:'samples'});
+        sep();
+        add('DC Removal (destructive)', ()=>this._dcRemoval(), {k:'memory'});
+      }
+
+      _buildExtMenu(){
+        const add = (label, fn)=>{
+          const div = document.createElement('div');
+          div.className = 'item';
+          div.innerHTML = `<span>${label}</span><span class="k"></span>`;
+          div.addEventListener('click', ()=>{
+            this._closeAllMenus();
+            fn();
+          });
+          this.extMenu.appendChild(div);
+        };
+        this.extMenu.innerHTML = '';
+        add('Open sample as <audio> preview', ()=>this._openAudioPreview());
+        add('Download WAV (render mono)', ()=>this._downloadWav());
+        add('External editor integration (stub)', ()=>this._toast('In desktop apps, this would open your configured editor.'));
+      }
+
+      _buildSizeMenu(){
+        const sizes = [
+          {label:'Small', w:860, h:520},
+          {label:'Medium', w:1040, h:620},
+          {label:'Large', w:1260, h:760}
+        ];
+        this.sizeMenu.innerHTML = '';
+        sizes.forEach(s=>{
+          const div = document.createElement('div');
+          div.className = 'item';
+          div.innerHTML = `<span>${s.label}</span><span class="k">${s.w}×${s.h}</span>`;
+          div.addEventListener('click', ()=>{
+            this._closeAllMenus();
+            if(this.isExternal){
+              window.resizeTo(s.w, s.h);
+              this._toast(`Window size set to <b>${s.label}</b>`);
+            }else{
+              this._toast('Size menu is only available in external window mode.');
+            }
+          });
+          this.sizeMenu.appendChild(div);
+        });
+      }
+
+      /* ============================= TRANSPORT ============================= */
+
+      async play(){
+        await this._ensureAudio();
+        if(!this.buffer || !this.mono) return;
+
+        // Stop any existing playback
+        this.stop();
+
+        const loopOn = this._isPressed(this.loopToggle);
+        const L = this._activeLoop();
+
+        // Zone playback vs loop-only playback
+        let start = loopOn ? L.start : this.zoneStart;
+        let end = loopOn ? L.end : this.zoneEnd;
+
+        start = this._clamp(start, 0, this.buffer.duration);
+        end = this._clamp(end, 0, this.buffer.duration);
+        if(end <= start + (1/this.sampleRate)){
+          this._toast('Region too small to play.');
+          return;
+        }
+
+        const src = this.audioCtx.createBufferSource();
+        src.buffer = this.buffer;
+
+        if(loopOn){
+          src.loop = true;
+          src.loopStart = start;
+          src.loopEnd = end;
+        }else{
+          src.loop = false;
+        }
+
+        src.connect(this.masterGain);
+
+        // Start from region offset (note: duration arg is optional; for one-shot we pass it)
+        try{
+          if(loopOn){
+            src.start(0, start);
+          }else{
+            src.start(0, start, end - start);
+          }
+        }catch(e){
+          console.warn(e);
+        }
+
+        src.onended = ()=>{
+          if(this.source === src) this.source = null;
+        };
+
+        this.source = src;
+      }
+
+      stop(){
+        if(this.source){
+          try{ this.source.stop(); }catch(e){}
+          this.source = null;
+        }
+      }
+
+      _prelistenLoop(){
+        // Plays the loop region once (even if Loop toggle is off) to mimic prelisten behavior.
+        if(!this.buffer) return;
+        const prev = this._isPressed(this.loopToggle);
+        this.loopToggle.setAttribute('aria-pressed','true');
+        this.play();
+        // Restore previous state after a short moment (avoid UI flicker)
+        setTimeout(()=>this.loopToggle.setAttribute('aria-pressed', String(prev)), 50);
+      }
+
+      /* ============================= VIEW / ZOOM ============================= */
+
+      _toggleMagnify(){
+        this.magnify = !this.magnify;
+        this.magnifyBtn.setAttribute('aria-pressed', String(this.magnify));
+        this._toast(this.magnify ? 'Magnify <b>ON</b> (drag a frame to zoom)' : 'Magnify OFF');
+      }
+
+      _jumpTo(which){
+        const viewLen = this.viewEnd - this.viewStart;
+        const L = this._activeLoop();
+        let t = 0;
+        if(which==='zoneStart') t = this.zoneStart;
+        if(which==='zoneEnd')   t = this.zoneEnd;
+        if(which==='loopStart') t = L.start;
+        if(which==='loopEnd')   t = L.end;
+
+        // Center view around t (except for zone edges where we align to edge)
+        if(which==='zoneStart'){
+          this.viewStart = t;
+          this.viewEnd = t + viewLen;
+        }else if(which==='zoneEnd'){
+          this.viewEnd = t;
+          this.viewStart = t - viewLen;
+        }else{
+          const mid = t;
+          this.viewStart = mid - viewLen/2;
+          this.viewEnd = mid + viewLen/2;
+        }
+
+        this._clampViewToZone();
+        this.needsRedraw = true;
+      }
+
+      _zoomOnLoop(){
+        const L = this._activeLoop();
+        const len = Math.max(0.001, L.end - L.start);
+        const pad = len * 0.08;
+        this._pushZoom();
+        this.viewStart = L.start - pad;
+        this.viewEnd = L.end + pad;
+        this._clampViewToZone();
+        this.needsRedraw = true;
+      }
+
+      _zoomAround(centerTime, factor){
+        // factor < 1 zooms in, >1 zooms out
+        const len = (this.viewEnd - this.viewStart) * factor;
+        const minLen = 0.02; // 20ms
+        const maxLen = Math.max(0.02, this.zoneEnd - this.zoneStart);
+        const clampedLen = this._clamp(len, minLen, maxLen);
+
+        this._pushZoom();
+        this.viewStart = centerTime - clampedLen/2;
+        this.viewEnd = centerTime + clampedLen/2;
+        this._clampViewToZone();
+        this.needsRedraw = true;
+      }
+
+      _zoomOutOne(){
+        // If we have history, pop it. Otherwise expand a bit.
+        if(this.zoomStack.length){
+          const z = this.zoomStack.pop();
+          this.viewStart = z.s;
+          this.viewEnd = z.e;
+        }else{
+          this._zoomAround((this.viewStart+this.viewEnd)/2, 1.5);
+          return;
+        }
+        this._clampViewToZone();
+        this.needsRedraw = true;
+      }
+
+      _pushZoom(){
+        this.zoomStack.push({s:this.viewStart, e:this.viewEnd});
+        if(this.zoomStack.length>50) this.zoomStack.shift();
+      }
+
+      _clampViewToZone(){
+        const min = this.zoneStart;
+        const max = this.zoneEnd;
+        const len = this.viewEnd - this.viewStart;
+        if(this.viewStart < min){ this.viewStart = min; this.viewEnd = min + len; }
+        if(this.viewEnd > max){ this.viewEnd = max; this.viewStart = max - len; }
+        this.viewStart = this._clamp(this.viewStart, min, max);
+        this.viewEnd = this._clamp(this.viewEnd, min, max);
+        if(this.viewEnd <= this.viewStart + 0.0005){
+          this.viewEnd = Math.min(max, this.viewStart + 0.0005);
+        }
+      }
+
+      /* ============================= POINTER / MARKERS ============================= */
+
+      _onPointerDown(e){
+        // Magnify behavior: if enabled OR Alt held
+        const magnifyActive = this.magnify || e.altKey;
+
+        const {x, y} = this._localXY(e);
+        const hit = this._hitTestMarkers(x, y);
+
+        this.pointerDown = true;
+        this.wavePane.setPointerCapture?.(e.pointerId);
+
+        if(magnifyActive){
+          // Start a zoom frame selection
+          this.drag = { type:'frame', x0:x, y0:y, x1:x, y1:y, wasClick:true };
+          this.needsRedraw = true;
+          return;
+        }
+
+        if(hit){
+          this.drag = { type: hit, x0:x, time0: this._xToTime(x) };
+          this.needsRedraw = true;
+          return;
+        }
+
+        // Otherwise, clicking inside waveform clears drag and (if magnify toggle on) zoom out
+        this.drag = null;
+      }
+
+      _onPointerMove(e){
+        if(!this.pointerDown || !this.drag) return;
+        const {x, y} = this._localXY(e);
+
+        if(this.drag.type === 'frame'){
+          this.drag.x1 = x;
+          this.drag.y1 = y;
+          this.drag.wasClick = this.drag.wasClick && (Math.abs(this.drag.x1 - this.drag.x0) < 3);
+          this.needsRedraw = true;
+          return;
+        }
+
+        // Dragging marker: convert x->time, apply snapping if needed
+        const t = this._xToTime(x);
+        if(this.drag.type === 'zoneStart'){
+          this.zoneStart = this._snapSampleMarkerIfNeeded(t);
+          // keep within bounds
+          this.zoneStart = this._clamp(this.zoneStart, 0, this.zoneEnd - 1/this.sampleRate);
+          // keep loop inside zone
+          const L = this._activeLoop();
+          L.start = Math.max(L.start, this.zoneStart);
+          L.end = Math.max(L.end, L.start + 1/this.sampleRate);
+        }
+        if(this.drag.type === 'zoneEnd'){
+          this.zoneEnd = this._snapSampleMarkerIfNeeded(t);
+          this.zoneEnd = this._clamp(this.zoneEnd, this.zoneStart + 1/this.sampleRate, this.buffer?.duration ?? Infinity);
+          const L = this._activeLoop();
+          L.end = Math.min(L.end, this.zoneEnd);
+          L.start = Math.min(L.start, L.end - 1/this.sampleRate);
+          // clamp view
+          this._clampViewToZone();
+        }
+        if(this.drag.type === 'loopStart'){
+          const L = this._activeLoop();
+          const snapped = this._snapLoopMarkerIfNeeded(t, 'start');
+          L.start = this._clamp(snapped, this.zoneStart, L.end - 1/this.sampleRate);
+        }
+        if(this.drag.type === 'loopEnd'){
+          const L = this._activeLoop();
+          const snapped = this._snapLoopMarkerIfNeeded(t, 'end');
+          L.end = this._clamp(snapped, L.start + 1/this.sampleRate, this.zoneEnd);
+        }
+
+        this._renderLoopPanel();
+        this._syncReadouts();
+        this.needsRedraw = true;
+      }
+
+      _onPointerUp(e){
+        if(!this.pointerDown) return;
+        this.pointerDown = false;
+
+        if(this.drag && this.drag.type === 'frame'){
+          const dx = this.drag.x1 - this.drag.x0;
+          const magnifyActive = this.magnify || e.altKey;
+
+          if(magnifyActive){
+            if(Math.abs(dx) < 4){
+              // click -> zoom out
+              this._zoomOutOne();
+              this.drag = null;
+              return;
+            }
+            // drag -> zoom into selected time range
+            const xA = Math.min(this.drag.x0, this.drag.x1);
+            const xB = Math.max(this.drag.x0, this.drag.x1);
+            const tA = this._xToTime(xA);
+            const tB = this._xToTime(xB);
+            if(tB - tA > 0.001){
+              this._pushZoom();
+              this.viewStart = tA;
+              this.viewEnd = tB;
+              this._clampViewToZone();
+              this.needsRedraw = true;
+            }
+          }
+          this.drag = null;
+          return;
+        }
+
+        const changedMarker = this.drag && this.drag.type && this.drag.type !== 'frame';
+        this.drag = null;
+        this.needsRedraw = true;
+
+        if(changedMarker && this._isPressed(this.autoPrelisten)){
+          this._prelistenLoop();
+        }
+      }
+
+      _hitTestMarkers(x, y){
+        // Marker positions (in px)
+        const zS = this._timeToX(this.zoneStart);
+        const zE = this._timeToX(this.zoneEnd);
+        const L = this._activeLoop();
+        const lS = this._timeToX(L.start);
+        const lE = this._timeToX(L.end);
+
+        const near = (a,b)=>Math.abs(a-b) < 6;
+
+        // Prefer loop markers over zone markers if very close
+        if(near(x, lS)) return 'loopStart';
+        if(near(x, lE)) return 'loopEnd';
+        if(near(x, zS)) return 'zoneStart';
+        if(near(x, zE)) return 'zoneEnd';
+        return null;
+      }
+
+      /* ============================= SNAPPING ============================= */
+
+      _snapSampleMarkerIfNeeded(time){
+        if(!this.snapSampleToZero || !this.mono || !this.buffer) return time;
+        return this._snapToZeroCrossing(time, null);
+      }
+
+      _snapLoopMarkerIfNeeded(time, edge){
+        if(!this.mono || !this.buffer) return time;
+        const L = this._activeLoop();
+        if(this.snapLoopMode === 'none') return time;
+
+        // Reference point is the opposite edge (for direction/value matching)
+        const refTime = (edge==='start') ? L.end : L.start;
+
+        if(this.snapLoopMode === 'zero'){
+          return this._snapToZeroCrossing(time, refTime);
+        }
+        if(this.snapLoopMode === 'value'){
+          return this._snapToValueCrossing(time, refTime);
+        }
+        return time;
+      }
+
+      _snapToZeroCrossing(targetTime, refTime){
+        const idxTarget = this._timeToSampleIndex(targetTime);
+        const radius = Math.floor(this.sampleRate * 0.020); // search ±20ms
+        const lo = Math.max(1, idxTarget - radius);
+        const hi = Math.min(this.mono.length-2, idxTarget + radius);
+
+        // Determine desired direction at ref crossing (rising/falling). If no ref, accept any.
+        let desiredDir = 0; // +1 rising, -1 falling, 0 any
+        if(refTime != null){
+          const iRef = this._timeToSampleIndex(refTime);
+          desiredDir = this._estimateCrossingDir(iRef);
+        }
+
+        let best = idxTarget;
+        let bestDist = Infinity;
+
+        for(let i=lo;i<=hi;i++){
+          const a = this.mono[i-1], b = this.mono[i];
+          if((a<=0 && b>=0) || (a>=0 && b<=0)){
+            const dir = (b-a)>=0 ? +1 : -1;
+            if(desiredDir !== 0 && dir !== desiredDir) continue;
+            const dist = Math.abs(i - idxTarget);
+            if(dist < bestDist){
+              bestDist = dist;
+              best = i;
+            }
+          }
+        }
+
+        return best / this.sampleRate;
+      }
+
+      _estimateCrossingDir(sampleIdx){
+        // Look at local slope sign around this point
+        const i = this._clamp(sampleIdx, 1, this.mono.length-2);
+        const a = this.mono[i-1], b = this.mono[i+1];
+        return (b - a) >= 0 ? +1 : -1;
+      }
+
+      _snapToValueCrossing(targetTime, refTime){
+        // Find a nearby sample index where waveform value and slope roughly match the reference point.
+        const idxTarget = this._timeToSampleIndex(targetTime);
+        const radius = Math.floor(this.sampleRate * 0.030); // ±30ms
+        const lo = Math.max(1, idxTarget - radius);
+        const hi = Math.min(this.mono.length-2, idxTarget + radius);
+
+        // Reference sample value and slope
+        const iRef = this._timeToSampleIndex(refTime);
+        const refVal = this.mono[this._clamp(iRef,0,this.mono.length-1)];
+        const refSlope = this._localSlope(iRef);
+
+        let best = idxTarget;
+        let bestScore = Infinity;
+
+        for(let i=lo;i<=hi;i++){
+          const val = this.mono[i];
+          const slope = this._localSlope(i);
+          // match direction (slope sign) and value proximity
+          if(Math.sign(slope) !== Math.sign(refSlope)) continue;
+
+          const score = Math.abs(val - refVal) + 0.35*Math.abs(slope - refSlope);
+          if(score < bestScore){
+            bestScore = score;
+            best = i;
+          }
+        }
+
+        return best / this.sampleRate;
+      }
+
+      _localSlope(i){
+        const a = this.mono[this._clamp(i-1,0,this.mono.length-1)];
+        const b = this.mono[this._clamp(i+1,0,this.mono.length-1)];
+        return b - a;
+      }
+
+      /* ============================= COMMANDS ============================= */
+
+      _restoreLoopsFromSample(){
+        const dur = this.buffer?.duration ?? this.zoneEnd;
+        const L = this._activeLoop();
+        L.start = this.zoneStart;
+        L.end = this.zoneEnd;
+        this._renderLoopPanel();
+        this.needsRedraw = true;
+        this._toast('Loop restored to full zone.');
+      }
+
+      _findLoopEnd({mode}){
+        if(!this.mono || !this.buffer) return;
+
+        const L = this._activeLoop();
+        const sr = this.sampleRate;
+
+        const startIdx = this._timeToSampleIndex(L.start);
+        const endIdx0  = this._timeToSampleIndex(L.end);
+        const baseLen  = Math.max(16, endIdx0 - startIdx);
+
+        // Scoring target: match start value + slope, and minimize discontinuity of derivative.
+        const startVal = this.mono[startIdx];
+        const startSlope = this._localSlope(startIdx);
+
+        // Search window:
+        // - short: within ± (baseLen*0.05) but at least ±2048 samples
+        // - long : from (baseLen*0.8) to (baseLen*2.5) ahead
+        let searchLo, searchHi;
+        if(mode === 'short'){
+          const rad = Math.max(2048, Math.floor(baseLen * 0.05));
+          searchLo = Math.max(startIdx + 16, endIdx0 - rad);
+          searchHi = Math.min(this.mono.length - 2, endIdx0 + rad);
+        }else{
+          const minLen = Math.floor(baseLen * 0.85);
+          const maxLen = Math.floor(baseLen * 2.5);
+          searchLo = Math.max(startIdx + minLen, startIdx + 16);
+          searchHi = Math.min(this.mono.length - 2, startIdx + maxLen);
+        }
+
+        let bestIdx = endIdx0;
+        let bestScore = Infinity;
+
+        for(let i=searchLo;i<=searchHi;i++){
+          const v = this.mono[i];
+          const s = this._localSlope(i);
+
+          const valueCost = Math.abs(v - startVal);
+          const slopeCost = Math.abs(s - startSlope);
+
+          // also keep end close to current for short mode
+          const lengthCost = (mode==='short') ? 0.00002*Math.abs(i - endIdx0) : 0;
+
+          const score = valueCost + 0.35*slopeCost + lengthCost;
+          if(score < bestScore){
+            bestScore = score;
+            bestIdx = i;
+          }
+        }
+
+        L.end = bestIdx / sr;
+        // enforce sane ordering
+        L.end = this._clamp(L.end, L.start + 1/sr, this.zoneEnd);
+
+        this._renderLoopPanel();
+        this.needsRedraw = true;
+
+        const txt = (mode==='short') ? 'Find loop end (short)' : 'Find loop end (long)';
+        this._toast(`${txt}: new end @ <b>${L.end.toFixed(3)}s</b>`);
+        if(this._isPressed(this.autoPrelisten)) this._prelistenLoop();
+      }
+
+      _dcRemoval(){
+        if(!this.mono || !this.buffer) return;
+
+        // Remove DC bias: subtract mean
+        let sum = 0;
+        for(let i=0;i<this.mono.length;i++) sum += this.mono[i];
+        const mean = sum / this.mono.length;
+
+        for(let i=0;i<this.mono.length;i++) this.mono[i] -= mean;
+
+        // Rebuild AudioBuffer (mono) so playback reflects changes
+        this.buffer = this._toAudioBuffer(this.mono, this.sampleRate);
+
+        this.needsRedraw = true;
+        this._toast(`DC Removal applied (mean=${mean.toFixed(6)}).`);
+      }
+
+      _nudgeLoop(edge, deltaSamples){
+        if(!this.buffer) return;
+        const L = this._activeLoop();
+        const dt = deltaSamples / this.sampleRate;
+
+        if(edge === 'start'){
+          L.start = this._clamp(L.start + dt, this.zoneStart, L.end - 1/this.sampleRate);
+        }else{
+          L.end = this._clamp(L.end + dt, L.start + 1/this.sampleRate, this.zoneEnd);
+        }
+
+        // Apply snap (if enabled)
+        if(this.snapLoopMode !== 'none'){
+          if(edge === 'start') L.start = this._snapLoopMarkerIfNeeded(L.start, 'start');
+          if(edge === 'end')   L.end   = this._snapLoopMarkerIfNeeded(L.end, 'end');
+        }
+
+        this._renderLoopPanel();
+        this.needsRedraw = true;
+
+        if(this._isPressed(this.autoPrelisten)) this._prelistenLoop();
+      }
+
+      /* ============================= EXT EDITOR ACTIONS (WEB) ============================= */
+
+      _openAudioPreview(){
+        if(!this.buffer || !this.mono) return this._toast('No sample loaded.');
+        const wavBlob = this._encodeWavMono(this.mono, this.sampleRate);
+        const url = URL.createObjectURL(wavBlob);
+
+        const w = window.open('', '_blank');
+        if(!w){ this._toast('Popup blocked. Allow popups for this file.'); return; }
+        w.document.write(`<!doctype html><meta charset="utf-8"><title>Sample Preview</title>
+          <body style="font-family:system-ui;background:#0b1016;color:#e7eef7;padding:18px">
+          <h2 style="margin:0 0 12px 0;">Sample Preview</h2>
+          <audio controls autoplay style="width:100%;" src="${url}"></audio>
+          <p style="opacity:.75;margin-top:12px">This is a browser-friendly preview (rendered WAV from the current buffer).</p>
+          </body>`);
+        w.document.close();
+      }
+
+      _downloadWav(){
+        if(!this.buffer || !this.mono) return this._toast('No sample loaded.');
+        const wavBlob = this._encodeWavMono(this.mono, this.sampleRate);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(wavBlob);
+        a.download = (this.sampleNameEl.textContent || 'sample') + '.wav';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        this._toast('WAV download started.');
+      }
+
+      _popOut(){
+        // Open the same file in a new window with external=1
+        const url = new URL(location.href);
+        url.searchParams.set('external','1');
+
+        const w = window.open(url.toString(), 'waveEditorExternal', 'width=1040,height=620');
+        if(!w){
+          this._toast('Popup blocked. Allow popups to pop out the editor.');
+          return;
+        }
+        this._toast('Opened external Wave Editor window.');
+      }
+
+      /* ============================= LOOP PANEL SYNC ============================= */
+
+      _activeLoop(){ return this.loopSlots[this.activeSlot]; }
+
+      _renderLoopPanel(){
+        if(!this.buffer) return;
+        const L = this._activeLoop();
+
+        const s = Math.floor(L.start * this.sampleRate);
+        const e = Math.floor(L.end * this.sampleRate);
+
+        this.loopStartSamplesEl.value = String(s);
+        this.loopEndSamplesEl.value = String(e);
+        this.loopStartTimeEl.textContent = L.start.toFixed(3) + 's';
+        this.loopEndTimeEl.textContent = L.end.toFixed(3) + 's';
+        this.xfadeSamplesEl.value = String(L.xfade|0);
+        this.loopModeEl.value = L.mode;
+      }
+
+      _setLoopStartSamples(n){
+        if(!this.buffer) return;
+        const L = this._activeLoop();
+        const s = this._clamp(Math.floor(n), 0, this.mono.length-2);
+        let t = s / this.sampleRate;
+        t = this._snapLoopMarkerIfNeeded(t, 'start');
+        L.start = this._clamp(t, this.zoneStart, L.end - 1/this.sampleRate);
+        this._renderLoopPanel();
+        this.needsRedraw = true;
+      }
+
+      _setLoopEndSamples(n){
+        if(!this.buffer) return;
+        const L = this._activeLoop();
+        const e = this._clamp(Math.floor(n), 1, this.mono.length-1);
+        let t = e / this.sampleRate;
+        t = this._snapLoopMarkerIfNeeded(t, 'end');
+        L.end = this._clamp(t, L.start + 1/this.sampleRate, this.zoneEnd);
+        this._renderLoopPanel();
+        this.needsRedraw = true;
+      }
+
+      _syncReadouts(){
+        if(!this.buffer){
+          this.roSStart.textContent = '0';
+          this.roSEnd.textContent = '0';
+          this.roLen.textContent = '0.00s';
+          return;
+        }
+        const sStart = Math.floor(this.zoneStart * this.sampleRate);
+        const sEnd = Math.floor(this.zoneEnd * this.sampleRate);
+
+        this.roSStart.textContent = String(sStart);
+        this.roSMod.textContent = '0';
+        this.roSEnd.textContent = String(sEnd);
+        this.roFmt.textContent = `${this.sampleRate} • ${this.bitDepth}`;
+        this.roLen.textContent = `${this.buffer.duration.toFixed(2)}s`;
+      }
+
+      /* ============================= DRAWING ============================= */
+
+      _tick(){
+        // Animation loop (only redraw when needed)
+        if(this.needsRedraw){
+          this._draw();
+          this.needsRedraw = false;
+        }
+        requestAnimationFrame(()=>this._tick());
+      }
+
+      _draw(){
+        const ctx = this.ctx2d;
+        const W = this.wavePane.clientWidth;
+        const H = this.wavePane.clientHeight;
+
+        // Background
+        ctx.clearRect(0,0,W,H);
+        ctx.save();
+
+        // Inner glossy top line
+        ctx.fillStyle = 'rgba(255,255,255,.05)';
+        ctx.fillRect(0,0,W,1);
+
+        // Ruler area
+        const rulerH = 24;
+        this._drawRuler(ctx, W, rulerH);
+
+        // Waveform area
+        const waveY = rulerH + 2;
+        const waveH = H - waveY - 2;
+
+        // Region fills (loop region tinted)
+        this._drawRegions(ctx, W, waveY, waveH);
+
+        // Waveform itself
+        this._drawWave(ctx, W, waveY, waveH);
+
+        // Markers on top
+        this._drawMarkers(ctx, W, waveY, waveH);
+
+        // Magnify drag frame (if any)
+        if(this.drag && this.drag.type==='frame'){
+          const x0 = this.drag.x0, x1 = this.drag.x1;
+          const xA = Math.min(x0,x1), xB = Math.max(x0,x1);
+          ctx.fillStyle = 'rgba(242,193,78,.10)';
+          ctx.fillRect(xA, waveY, xB-xA, waveH);
+          ctx.strokeStyle = 'rgba(242,193,78,.85)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(xA+0.5, waveY+0.5, (xB-xA)-1, waveH-1);
+        }
+
+        ctx.restore();
+      }
+
+      _drawRuler(ctx, W, H){
+        // dark rail
+        ctx.fillStyle = 'rgba(0,0,0,.28)';
+        ctx.fillRect(0,0,W,H);
+
+        const start = this.viewStart;
+        const end = this.viewEnd;
+        const len = Math.max(0.0001, end - start);
+
+        // Choose tick spacing
+        const nice = (sec)=>{
+          const pow = Math.pow(10, Math.floor(Math.log10(sec)));
+          const n = sec / pow;
+          let m = 1;
+          if(n >= 5) m = 5;
+          else if(n >= 2) m = 2;
+          return m * pow;
+        };
+
+        const targetPx = 90;
+        const secPerPx = len / W;
+        const rawStep = secPerPx * targetPx;
+        const step = nice(rawStep);
+
+        // Draw ticks + labels
+        ctx.strokeStyle = 'rgba(255,255,255,.20)';
+        ctx.fillStyle = 'rgba(255,255,255,.65)';
+        ctx.font = '12px var(--mono)';
+        ctx.textBaseline = 'top';
+
+        const first = Math.floor(start/step)*step;
+        for(let t=first; t<=end+step; t+=step){
+          const x = this._timeToX(t);
+          if(x < -20 || x > W+20) continue;
+
+          // Major tick
+          ctx.beginPath();
+          ctx.moveTo(x+0.5, H-1);
+          ctx.lineTo(x+0.5, H-10);
+          ctx.stroke();
+
+          // Label in seconds (ms if zoomed far)
+          const label = (len < 1.5) ? (t.toFixed(2)+'s') : (t.toFixed(1)+'s');
+          ctx.fillText(label, x+4, 4);
+        }
+      }
+
+      _drawRegions(ctx, W, y, h){
+        const L = this._activeLoop();
+        const zS = this._timeToX(this.zoneStart);
+        const zE = this._timeToX(this.zoneEnd);
+        const lS = this._timeToX(L.start);
+        const lE = this._timeToX(L.end);
+
+        // Zone background subtle
+        ctx.fillStyle = 'rgba(0,0,0,.10)';
+        ctx.fillRect(0, y, W, h);
+
+        // Loop region highlight
+        ctx.fillStyle = 'rgba(242,193,78,.12)';
+        ctx.fillRect(Math.min(lS,lE), y, Math.abs(lE-lS), h);
+
+        // Zero line
+        ctx.strokeStyle = 'rgba(255,255,255,.22)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, y + h/2 + 0.5);
+        ctx.lineTo(W, y + h/2 + 0.5);
+        ctx.stroke();
+      }
+
+      _drawWave(ctx, W, y, h){
+        if(!this.mono){
+          // placeholder
+          ctx.fillStyle='rgba(255,255,255,.20)';
+          ctx.font='14px var(--font)';
+          ctx.fillText('No sample loaded.', 14, y+14);
+          return;
+        }
+
+        const start = this.viewStart;
+        const end = this.viewEnd;
+        const len = end - start;
+        const i0 = this._timeToSampleIndex(start);
+        const i1 = this._timeToSampleIndex(end);
+
+        const mid = y + h/2;
+        const amp = (h/2) * 0.92 * this.zoomY;
+
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--waveLine');
+        ctx.lineWidth = 1;
+
+        // Draw min/max per pixel column (fast and "editor-like")
+        ctx.beginPath();
+        for(let px=0; px<W; px++){
+          const tA = start + (px/W)*len;
+          const tB = start + ((px+1)/W)*len;
+          const a = this._timeToSampleIndex(tA);
+          const b = Math.min(this.mono.length-1, this._timeToSampleIndex(tB));
+
+          let mn =  1e9, mx = -1e9;
+          for(let i=a;i<=b;i++){
+            const v = this.mono[i];
+            if(v<mn) mn=v;
+            if(v>mx) mx=v;
+          }
+          const y1 = mid - mx*amp;
+          const y2 = mid - mn*amp;
+          ctx.moveTo(px+0.5, y1);
+          ctx.lineTo(px+0.5, y2);
+        }
+        ctx.stroke();
+      }
+
+      _drawMarkers(ctx, W, y, h){
+        const L = this._activeLoop();
+
+        const drawLine = (x, color, label)=>{
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x+0.5, y);
+          ctx.lineTo(x+0.5, y+h);
+          ctx.stroke();
+
+          // top cap
+          ctx.fillStyle = color;
+          ctx.fillRect(x-5, y, 10, 4);
+
+          // label bubble
+          ctx.font = '11px var(--mono)';
+          ctx.fillStyle = 'rgba(0,0,0,.70)';
+          ctx.strokeStyle = 'rgba(255,255,255,.12)';
+          const txt = label;
+          const w = ctx.measureText(txt).width + 10;
+          const bx = this._clamp(x - w/2, 6, W-w-6);
+          const by = y + 6;
+
+          // bubble bg
+          ctx.fillStyle = 'rgba(0,0,0,.40)';
+          ctx.fillRect(bx, by, w, 18);
+          ctx.strokeRect(bx+0.5, by+0.5, w-1, 17);
+
+          ctx.fillStyle = color;
+          ctx.fillText(txt, bx+5, by+4);
+        };
+
+        const zoneColor = getComputedStyle(document.documentElement).getPropertyValue('--markerZone').trim();
+        const loopColor = getComputedStyle(document.documentElement).getPropertyValue('--markerLoop').trim();
+
+        drawLine(this._timeToX(this.zoneStart), zoneColor, 'Zone Start');
+        drawLine(this._timeToX(this.zoneEnd),   zoneColor, 'Zone End');
+        drawLine(this._timeToX(L.start), loopColor, 'Loop Start');
+        drawLine(this._timeToX(L.end),   loopColor, 'Loop End');
+      }
+
+      /* ============================= HELPERS ============================= */
+
+      _localXY(e){
+        const r = this.wavePane.getBoundingClientRect();
+        return { x: e.clientX - r.left, y: e.clientY - r.top };
+      }
+
+      _timeToX(time){
+        const W = this.wavePane.clientWidth;
+        const t = (time - this.viewStart) / (this.viewEnd - this.viewStart);
+        return t * W;
+      }
+
+      _xToTime(x){
+        const W = this.wavePane.clientWidth;
+        const t = x / W;
+        return this.viewStart + t * (this.viewEnd - this.viewStart);
+      }
+
+      _timeToSampleIndex(time){
+        const i = Math.floor(time * this.sampleRate);
+        return this._clamp(i, 0, (this.mono?.length ?? 1) - 1);
+      }
+
+      _toAudioBuffer(mono, sampleRate){
+        // Create a mono AudioBuffer from Float32Array
+        const ctx = this.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const b = ctx.createBuffer(1, mono.length, sampleRate);
+        b.getChannelData(0).set(mono);
+        return b;
+      }
+
+      _togglePressed(btn){
+        const v = !this._isPressed(btn);
+        btn.setAttribute('aria-pressed', String(v));
+      }
+      _isPressed(btn){ return btn.getAttribute('aria-pressed') === 'true'; }
+
+      _toast(html, danger=false){
+        this.toastEl.innerHTML = html;
+        this.toastEl.style.borderColor = danger ? 'rgba(255,87,87,.45)' : 'rgba(255,255,255,.16)';
+        this.toastEl.classList.add('show');
+        clearTimeout(this._toastT);
+        this._toastT = setTimeout(()=>this.toastEl.classList.remove('show'), 2200);
+      }
+
+      _escape(s){
+        return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+      }
+
+      _clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+      /* ============================= WAV ENCODER (mono) ============================= */
+
+      _encodeWavMono(float32, sampleRate){
+        // 16-bit PCM WAV
+        const numSamples = float32.length;
+        const bytesPerSample = 2;
+        const blockAlign = bytesPerSample * 1;
+        const byteRate = sampleRate * blockAlign;
+        const dataSize = numSamples * bytesPerSample;
+
+        const buf = new ArrayBuffer(44 + dataSize);
+        const v = new DataView(buf);
+
+        const writeStr = (off, str)=>{
+          for(let i=0;i<str.length;i++) v.setUint8(off+i, str.charCodeAt(i));
+        };
+
+        writeStr(0,'RIFF');
+        v.setUint32(4, 36 + dataSize, true);
+        writeStr(8,'WAVE');
+
+        writeStr(12,'fmt ');
+        v.setUint32(16, 16, true);          // fmt chunk size
+        v.setUint16(20, 1, true);           // PCM
+        v.setUint16(22, 1, true);           // channels
+        v.setUint32(24, sampleRate, true);
+        v.setUint32(28, byteRate, true);
+        v.setUint16(32, blockAlign, true);
+        v.setUint16(34, 16, true);          // bits
+
+        writeStr(36,'data');
+        v.setUint32(40, dataSize, true);
+
+        // PCM samples
+        let o = 44;
+        for(let i=0;i<numSamples;i++){
+          let s = Math.max(-1, Math.min(1, float32[i]));
+          s = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          v.setInt16(o, s, true);
+          o += 2;
+        }
+
+        return new Blob([buf], {type:'audio/wav'});
+      }
+    }
+
+    // Boot
+    const app = new WaveEditorApp();
+    window.__waveEditor = app; // debug handle
+  </script>
+</body>
+</html>
