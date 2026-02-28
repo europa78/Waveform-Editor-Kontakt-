@@ -754,8 +754,20 @@
             <span>Threshold</span>
             <input id="gridThreshold" type="range" min="0" max="1" step="0.01" value="0.35" style="width:130px;" />
           </div>
+          <div class="gRow" id="minSliceRow">
+            <span>Min Slice (ms)</span>
+            <input class="num" id="minSliceMs" inputmode="numeric" value="35" style="width:80px;" />
+          </div>
+          <div class="gRow">
+            <span>Tools</span>
+            <div class="row" style="gap:6px;">
+              <button class="miniToggle" id="gridToolAdd" aria-pressed="false">＋</button>
+              <button class="miniToggle" id="gridToolRemove" aria-pressed="false">−</button>
+              <button class="miniToggle" id="gridToolLock" aria-pressed="false">Lock</button>
+            </div>
+          </div>
           <div style="margin-top:8px; font-size:12px; color:var(--muted2); line-height:1.35;">
-            Drag marker <b>1</b> to offset the full grid. Top handles audition slices.
+            Drag marker <b>1</b> to offset following unlocked markers. Top handles audition slices.
           </div>
         </aside>
       </div>
@@ -862,6 +874,11 @@
         this.sigSelect = document.querySelector('#sigSelect');
         this.gridThresholdEl = document.querySelector('#gridThreshold');
         this.autoThresholdRow = document.querySelector('#autoThresholdRow');
+        this.minSliceRow = document.querySelector('#minSliceRow');
+        this.minSliceMsEl = document.querySelector('#minSliceMs');
+        this.gridToolAddBtn = document.querySelector('#gridToolAdd');
+        this.gridToolRemoveBtn = document.querySelector('#gridToolRemove');
+        this.gridToolLockBtn = document.querySelector('#gridToolLock');
 
         // Tabs
         this.tabEls = Array.from(document.querySelectorAll('.tab'));
@@ -916,9 +933,11 @@
         this.gridBpm = 126.32;
         this.gridSig = '4/4';
         this.gridThreshold = 0.35;
+        this.minSliceMs = 35;
         this.gridMarkers = [];
         this.gridOffset = 0;
         this.gridTransientCandidates = [];
+        this.gridTool = 'move';
 
         // Vertical view
         this.viewOffsetY = 0;
@@ -1013,6 +1032,24 @@
         this.bpmDoubleBtn.addEventListener('click', ()=>{ this.gridBpm = Math.min(400, this.gridBpm * 2); this._rebuildGridMarkers(); this._syncGridPanelUI(); });
         this.sigSelect.addEventListener('change', ()=>{ this.gridSig = this.sigSelect.value; this._rebuildGridMarkers(); this._syncGridPanelUI(); });
         this.gridThresholdEl.addEventListener('input', ()=>{ this.gridThreshold = Number(this.gridThresholdEl.value); if(this.gridMode==='auto'){ this._rebuildGridMarkers(); this.needsRedraw = true; } });
+        this.minSliceMsEl.addEventListener('change', ()=>{
+          const n = Number(this.minSliceMsEl.value);
+          if(Number.isFinite(n)) this.minSliceMs = this._clamp(n, 0, 1000);
+          this.minSliceMsEl.value = String(Math.round(this.minSliceMs));
+          if(this.gridMode==='auto') this._rebuildGridMarkers();
+          this.needsRedraw = true;
+        });
+        this.gridToolAddBtn.addEventListener('click', ()=>this._setGridTool(this.gridTool==='add'?'move':'add'));
+        this.gridToolRemoveBtn.addEventListener('click', ()=>this._setGridTool(this.gridTool==='remove'?'move':'remove'));
+        this.gridToolLockBtn.addEventListener('click', (e)=>{
+          if(e.altKey){
+            const shouldLock = this.gridMarkers.some(m=>!m.locked);
+            this.gridMarkers.forEach(m=>m.locked = shouldLock);
+            this.needsRedraw = true;
+            return;
+          }
+          this._setGridTool(this.gridTool==='lock'?'move':'lock');
+        });
 
         // Loop panel: slots
         this.slotEls.forEach(el=>{
@@ -1558,8 +1595,31 @@
           return;
         }
 
+        if(this.gridPower && this.gridTool==='add' && y > 24){
+          const t = this._clamp(this._xToTime(x), this.zoneStart, this.zoneEnd);
+          this.gridMarkers.push(this._newMarker(t, 'manual', false));
+          this._sortMarkers(this.gridMarkers);
+          this.needsRedraw = true;
+          this.drag = null;
+          return;
+        }
+
         if(hit){
-          this.drag = { type: hit, x0:x, time0: this._xToTime(x), offset0: this.gridOffset };
+          if(this.gridTool==='remove' && hit.startsWith('gridHandle:')){
+            const idx = Number(hit.split(':')[1]);
+            this.gridMarkers.splice(idx, 1);
+            this.needsRedraw = true;
+            this.drag = null;
+            return;
+          }
+          if(this.gridTool==='lock' && (hit.startsWith('gridHandle:') || hit.startsWith('gridMarker:'))){
+            const idx = Number(hit.split(':')[1]);
+            if(this.gridMarkers[idx]) this.gridMarkers[idx].locked = !this.gridMarkers[idx].locked;
+            this.needsRedraw = true;
+            this.drag = null;
+            return;
+          }
+          this.drag = { type: hit, x0:x, time0: this._xToTime(x), markers0: this.gridMarkers.map(m=>({...m})) };
           this.needsRedraw = true;
           return;
         }
@@ -1606,14 +1666,23 @@
           const snapped = this._snapLoopMarkerIfNeeded(t, 'end');
           L.end = this._clamp(snapped, L.start + 1/this.sampleRate, this.zoneEnd);
         }
-        if(this.drag.type === 'gridOffset'){
-          this.gridOffset = this.drag.offset0 + (t - this.drag.time0);
-          this._rebuildGridMarkers();
+        const movingGridIdx = (this.drag.type.startsWith('gridMarker:') || this.drag.type.startsWith('gridHandle:')) ? Number(this.drag.type.split(':')[1]) : -1;
+        if(movingGridIdx === 0){
+          const dt = t - this.drag.time0;
+          if(!this.drag.markers0[0]?.locked){
+            this.gridMarkers = this.drag.markers0.map((m, i)=>{
+              if(i===0) return {...m, timeSec:this._clamp(this._markerTime(m)+dt, this.zoneStart, this.zoneEnd)};
+              if(!m.locked) return {...m, timeSec:this._clamp(this._markerTime(m)+dt, this.zoneStart, this.zoneEnd)};
+              return {...m};
+            });
+            this._sortMarkers(this.gridMarkers);
+          }
         }
-        if(this.drag.type.startsWith('gridMarker:')){
-          const i = Number(this.drag.type.split(':')[1]);
-          if(this.gridMarkers[i]) this.gridMarkers[i] = this._clamp(t, this.zoneStart, this.zoneEnd);
-          this.gridMarkers.sort((a,b)=>a-b);
+        if(movingGridIdx > 0){
+          if(this.gridMarkers[movingGridIdx] && !this.gridMarkers[movingGridIdx].locked){
+            this.gridMarkers[movingGridIdx].timeSec = this._clamp(t, this.zoneStart, this.zoneEnd);
+            this._sortMarkers(this.gridMarkers);
+          }
         }
 
         this._renderLoopPanel();
@@ -1651,7 +1720,7 @@
           return;
         }
 
-        if(this.drag && this.drag.type.startsWith('gridHandle:')){
+        if(this.drag && this.drag.type.startsWith('gridHandle:') && this.gridTool==='move'){
           const idx = Number(this.drag.type.split(':')[1]);
           this._auditionGridSlice(idx);
         }
@@ -1675,9 +1744,9 @@
 
         if(this.gridPower){
           for(let i=0;i<this.gridMarkers.length;i++){
-            const gx = this._timeToX(this.gridMarkers[i]);
+            const gx = this._timeToX(this._markerTime(this.gridMarkers[i]));
             if(near(x,gx,7) && y <= 44) return `gridHandle:${i}`;
-            if(near(x,gx,6)) return (i===0) ? 'gridOffset' : `gridMarker:${i}`;
+            if(near(x,gx,6)) return `gridMarker:${i}`;
           }
         }
 
@@ -1945,6 +2014,13 @@
       }
 
 
+
+      _setGridTool(tool){
+        this.gridTool = tool;
+        this._syncGridPanelUI();
+        this.needsRedraw = true;
+      }
+
       _syncGridPanelUI(){
         this.gridPanel.classList.toggle('off', !this.gridPower);
         this.gridPowerBtn.setAttribute('aria-pressed', String(this.gridPower));
@@ -1954,6 +2030,11 @@
         this.bpmPill.textContent = this.gridBpm.toFixed(2);
         this.sigSelect.value = this.gridSig;
         this.autoThresholdRow.style.display = (this.gridMode==='auto') ? '' : 'none';
+        this.minSliceRow.style.display = (this.gridMode==='auto') ? '' : 'none';
+        this.minSliceMsEl.value = String(Math.round(this.minSliceMs));
+        this.gridToolAddBtn.setAttribute('aria-pressed', String(this.gridTool==='add'));
+        this.gridToolRemoveBtn.setAttribute('aria-pressed', String(this.gridTool==='remove'));
+        this.gridToolLockBtn.setAttribute('aria-pressed', String(this.gridTool==='lock'));
       }
 
       _gridStepSeconds(){
@@ -1981,36 +2062,74 @@
         }
       }
 
+      _newMarker(timeSec, source='auto', locked=false){
+        return { timeSec, source, locked };
+      }
+
+      _markerTime(m){ return (typeof m === 'number') ? m : m.timeSec; }
+
+      _sortMarkers(markers){
+        markers.sort((a,b)=>this._markerTime(a)-this._markerTime(b));
+        return markers;
+      }
+
+      _mergeAutoWithPreserved(autoMarkers){
+        const minGap = this.minSliceMs / 1000;
+        const preserved = this._sortMarkers(this.gridMarkers.filter(m=>m.locked || m.source==='manual').map(m=>({...m})));
+        const accepted = [...preserved];
+        const sortedAuto = this._sortMarkers(autoMarkers.map(m=>({...m, locked:false, source:'auto'})));
+
+        for(const cand of sortedAuto){
+          const t = this._markerTime(cand);
+          let ins = 0;
+          while(ins<accepted.length && this._markerTime(accepted[ins]) < t) ins++;
+          const prev = accepted[ins-1];
+          const next = accepted[ins];
+          if(prev && (t - this._markerTime(prev)) < minGap) continue;
+          if(next && (this._markerTime(next) - t) < minGap) continue;
+          accepted.splice(ins, 0, cand);
+        }
+        return accepted;
+      }
+
       _rebuildGridMarkers(){
-        this.gridMarkers = [];
-        if(!this.buffer || !this.gridPower) return;
+        if(!this.buffer) return;
+        if(!this.gridPower) return;
+
         if(this.gridMode === 'fix'){
+          const preserved = this.gridMarkers.filter(m=>m.locked || m.source==='manual').map(m=>({...m}));
+          const generated = [];
           const step = this._gridStepSeconds();
           const maxCount = 512;
           for(let i=0;i<maxCount;i++){
             const t = this.zoneStart + this.gridOffset + i*step;
             if(t > this.zoneEnd) break;
-            if(t >= this.zoneStart) this.gridMarkers.push(t);
+            if(t >= this.zoneStart) generated.push(this._newMarker(t, 'auto', false));
           }
-        }else{
-          const maxE = this.gridTransientCandidates.reduce((m,c)=>Math.max(m,c.e), 1e-6);
-          const gate = maxE * this.gridThreshold;
-          this.gridMarkers = this.gridTransientCandidates
-            .filter(c=>c.t>=this.zoneStart && c.t<=this.zoneEnd && c.e>=gate)
-            .map(c=>c.t)
-            .slice(0, 512);
-          if(this.gridMarkers.length===0 || this.gridMarkers[0] > this.zoneStart + 1/this.sampleRate){
-            this.gridMarkers.unshift(this.zoneStart);
-          }
+          this.gridMarkers = this._sortMarkers([...preserved, ...generated]);
+          return;
         }
+
+        const maxE = this.gridTransientCandidates.reduce((m,c)=>Math.max(m,c.e), 1e-6);
+        const gate = maxE * this.gridThreshold;
+        let autoMarkers = this.gridTransientCandidates
+          .filter(c=>c.t>=this.zoneStart && c.t<=this.zoneEnd && c.e>=gate)
+          .map(c=>this._newMarker(c.t, 'auto', false))
+          .slice(0, 512);
+
+        if(autoMarkers.length===0 || this._markerTime(autoMarkers[0]) > this.zoneStart + 1/this.sampleRate){
+          autoMarkers.unshift(this._newMarker(this.zoneStart, 'auto', false));
+        }
+
+        this.gridMarkers = this._mergeAutoWithPreserved(autoMarkers);
       }
 
       async _auditionGridSlice(idx){
         if(!this.buffer || !this.gridPower || this.gridMarkers[idx] == null) return;
         await this._ensureAudio();
         this.stop();
-        const start = this._clamp(this.gridMarkers[idx], this.zoneStart, this.zoneEnd);
-        const next = this.gridMarkers[idx+1] ?? this.zoneEnd;
+        const start = this._clamp(this._markerTime(this.gridMarkers[idx]), this.zoneStart, this.zoneEnd);
+        const next = this.gridMarkers[idx+1] ? this._markerTime(this.gridMarkers[idx+1]) : this.zoneEnd;
         const end = this._clamp(next, start + 1/this.sampleRate, this.zoneEnd);
         const src = this.audioCtx.createBufferSource();
         src.buffer = this.buffer;
@@ -2209,12 +2328,17 @@
         ctx.stroke();
 
         if(this.gridPower && this.gridMode==='auto'){
-          const th = y + h * (0.92 - this.gridThreshold * 0.84);
-          ctx.strokeStyle = 'rgba(87,210,255,.75)';
-          ctx.setLineDash([4,4]);
+          const amp = (h/2) * 0.92 * this.zoomY;
+          const thresholdAmp = this.gridThreshold;
+          const yTop = mid - thresholdAmp * amp;
+          const yBottom = mid + thresholdAmp * amp;
+          ctx.strokeStyle = 'rgba(182,120,255,.85)';
+          ctx.setLineDash([6,4]);
           ctx.beginPath();
-          ctx.moveTo(0, th + 0.5);
-          ctx.lineTo(W, th + 0.5);
+          ctx.moveTo(0, yTop + 0.5);
+          ctx.lineTo(W, yTop + 0.5);
+          ctx.moveTo(0, yBottom + 0.5);
+          ctx.lineTo(W, yBottom + 0.5);
           ctx.stroke();
           ctx.setLineDash([]);
         }
@@ -2313,15 +2437,18 @@
         if(this.gridPower){
           ctx.font = '11px var(--mono)';
           for(let i=0;i<this.gridMarkers.length;i++){
-            const x = this._timeToX(this.gridMarkers[i]);
-            ctx.strokeStyle = (i===0) ? 'rgba(87,210,255,.95)' : 'rgba(255,255,255,.45)';
+            const m = this.gridMarkers[i];
+            const x = this._timeToX(this._markerTime(m));
+            const lockedColor = 'rgba(150,150,150,.9)';
+            const normalColor = (i===0) ? 'rgba(87,210,255,.95)' : 'rgba(255,255,255,.45)';
+            ctx.strokeStyle = m.locked ? lockedColor : normalColor;
             ctx.lineWidth = (i===0) ? 2 : 1;
             ctx.beginPath();
             ctx.moveTo(x+0.5, y);
             ctx.lineTo(x+0.5, y+h);
             ctx.stroke();
 
-            ctx.fillStyle = 'rgba(87,210,255,.95)';
+            ctx.fillStyle = m.locked ? 'rgba(150,150,150,.9)' : 'rgba(87,210,255,.95)';
             ctx.beginPath();
             ctx.moveTo(x, y+2);
             ctx.lineTo(x-5, y+11);
@@ -2330,7 +2457,7 @@
             ctx.fill();
 
             if(i===0){
-              ctx.fillStyle = 'rgba(87,210,255,.95)';
+              ctx.fillStyle = m.locked ? 'rgba(170,170,170,.95)' : 'rgba(87,210,255,.95)';
               ctx.fillText('1', x+6, y+5);
             }
           }
