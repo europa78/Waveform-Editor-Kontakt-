@@ -524,6 +524,54 @@
     .sampleEditWrap{ display:grid; grid-template-columns: 1fr 220px; gap:10px; }
     .sampleEditCols{ display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
 
+    .rackHeader, .instrumentHeader{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:6px 10px;
+      background: linear-gradient(180deg, rgba(56,72,91,.68), rgba(32,43,57,.72));
+      border-bottom:1px solid rgba(0,0,0,.35);
+      font-size:12px;
+      color:var(--muted);
+    }
+    .rackHeader .spacer, .instrumentHeader .spacer{ flex:1; }
+
+    .perfView{
+      margin:0 10px 10px 10px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:8px;
+      background:rgba(0,0,0,.2);
+      overflow:hidden;
+    }
+    .perfViewHead{ padding:6px 8px; border-bottom:1px solid rgba(255,255,255,.1); font-size:12px; color:var(--muted2); }
+    .perfViewBody{ padding:8px; min-height:34px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+
+    .scriptEditorPanel{
+      position:fixed;
+      inset:8% 8% 10% 8%;
+      z-index:90;
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:10px;
+      background: linear-gradient(180deg, rgba(38,52,68,.98), rgba(17,24,32,.98));
+      box-shadow: 0 16px 50px rgba(0,0,0,.55);
+      display:none;
+      flex-direction:column;
+      overflow:hidden;
+    }
+    .scriptEditorPanel.open{ display:flex; }
+    .scriptTop{ display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px solid rgba(255,255,255,.1); }
+    .scriptSlots{ display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap:4px; }
+    .scriptSlot{ height:26px; border:1px solid var(--edge); border-radius:4px; background:rgba(0,0,0,.25); color:var(--txt); cursor:pointer; font-size:12px; }
+    .scriptSlot.active{ border-color:rgba(242,193,78,.55); box-shadow: inset 0 0 0 1px rgba(242,193,78,.25); }
+    .scriptBody{ display:grid; grid-template-columns: 280px 1fr; min-height:0; flex:1; }
+    .scriptLeft{ border-right:1px solid rgba(255,255,255,.1); padding:8px; display:flex; flex-direction:column; gap:8px; }
+    .scriptRight{ padding:8px; display:flex; flex-direction:column; gap:8px; min-height:0; }
+    .scriptUiArea{ border:1px solid rgba(255,255,255,.12); border-radius:6px; background:rgba(0,0,0,.2); min-height:90px; padding:8px; overflow:auto; }
+    .scriptCode{ display:none; flex-direction:column; gap:8px; min-height:0; }
+    .scriptCode.open{ display:flex; flex:1; }
+    .scriptCode textarea{ width:100%; min-height:220px; resize:vertical; background:#0f151d; color:#dce7f6; border:1px solid rgba(255,255,255,.15); border-radius:6px; padding:8px; font-family:var(--mono); font-size:12px; }
+    .scriptMsg{ font-size:12px; color:var(--muted2); min-height:16px; }
+
     /* ---------- Toast ---------- */
     .toast{
       position:fixed;
@@ -622,6 +670,12 @@
         </div>
       </div>
 
+      <div class="rackHeader">
+        <span>Rack Header</span>
+        <div class="spacer"></div>
+        <button class="btn" id="globalKspBtn" title="Open global/multi script editor">KSP</button>
+      </div>
+
       <!-- ============================ STATUS BAR ============================ -->
       <div class="statusbar">
         <span class="label">Sample:</span>
@@ -634,6 +688,12 @@
           <span class="pill">Fmt <span id="roFmt">48000 • 24</span></span>
           <span class="pill">Len <span id="roLen">0.00s</span></span>
         </div>
+      </div>
+
+      <div class="instrumentHeader">
+        <span>Instrument Header (Edit Mode)</span>
+        <div class="spacer"></div>
+        <button class="btn" id="instrumentScriptBtn" title="Open instrument script editor">Script Editor</button>
       </div>
 
       <!-- ============================ MAIN (WAVEFORM) ============================ -->
@@ -878,8 +938,45 @@
           </div>
         </aside>
       </div>
+
+      <section class="perfView" id="perfView">
+        <div class="perfViewHead">Performance View (script controls)</div>
+        <div class="perfViewBody" id="perfViewContent"><span style="color:var(--muted2);font-size:12px;">No script controls visible.</span></div>
+      </section>
     </div>
   </div>
+
+  <section class="scriptEditorPanel" id="scriptEditorPanel" aria-label="Script Editor">
+    <div class="scriptTop">
+      <strong id="scriptEditorTitle">Script Editor</strong>
+      <div class="spacer"></div>
+      <button class="btn" id="scriptEditorClose">Close</button>
+    </div>
+    <div style="padding:8px; border-bottom:1px solid rgba(255,255,255,.1);">
+      <div class="scriptSlots" id="scriptSlotTabs"></div>
+    </div>
+    <div class="scriptBody">
+      <div class="scriptLeft">
+        <button class="btn toggle" id="scriptBypassBtn" aria-pressed="false">Bypass</button>
+        <select class="select" id="scriptPresetSelect"></select>
+        <button class="btn" id="scriptLoadPresetBtn">Load Preset</button>
+        <button class="btn" id="scriptEditBtn">Edit</button>
+        <button class="btn" id="scriptSavePresetBtn">Save Preset</button>
+        <div class="scriptMsg" id="scriptStatusMsg"></div>
+      </div>
+      <div class="scriptRight">
+        <div class="scriptUiArea" id="scriptUiArea"></div>
+        <div class="scriptCode" id="scriptCodePanel">
+          <textarea id="scriptSource"></textarea>
+          <div class="row" style="gap:6px;">
+            <button class="btn" id="scriptApplyBtn">Apply</button>
+            <button class="btn" id="scriptLockBtn">Lock with Password</button>
+          </div>
+          <div class="scriptMsg" id="scriptCompileMsg"></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- Menus -->
   <div class="menu" id="snapMenu" role="menu" aria-label="snap menu"></div>
@@ -931,6 +1028,27 @@
         this.popOutBtn = document.querySelector('#popOutBtn');
         this.loadBtn = document.querySelector('#loadBtn');
         this.fileInput = document.querySelector('#fileInput');
+        this.globalKspBtn = document.querySelector('#globalKspBtn');
+        this.instrumentScriptBtn = document.querySelector('#instrumentScriptBtn');
+        this.perfViewEl = document.querySelector('#perfView');
+        this.perfViewContentEl = document.querySelector('#perfViewContent');
+
+        this.scriptEditorPanel = document.querySelector('#scriptEditorPanel');
+        this.scriptEditorTitle = document.querySelector('#scriptEditorTitle');
+        this.scriptEditorCloseBtn = document.querySelector('#scriptEditorClose');
+        this.scriptSlotTabs = document.querySelector('#scriptSlotTabs');
+        this.scriptBypassBtn = document.querySelector('#scriptBypassBtn');
+        this.scriptPresetSelect = document.querySelector('#scriptPresetSelect');
+        this.scriptLoadPresetBtn = document.querySelector('#scriptLoadPresetBtn');
+        this.scriptEditBtn = document.querySelector('#scriptEditBtn');
+        this.scriptSavePresetBtn = document.querySelector('#scriptSavePresetBtn');
+        this.scriptStatusMsg = document.querySelector('#scriptStatusMsg');
+        this.scriptUiArea = document.querySelector('#scriptUiArea');
+        this.scriptCodePanel = document.querySelector('#scriptCodePanel');
+        this.scriptSource = document.querySelector('#scriptSource');
+        this.scriptApplyBtn = document.querySelector('#scriptApplyBtn');
+        this.scriptLockBtn = document.querySelector('#scriptLockBtn');
+        this.scriptCompileMsg = document.querySelector('#scriptCompileMsg');
 
         this.stopBtn = document.querySelector('#stopBtn');
         this.playBtn = document.querySelector('#playBtn');
@@ -1125,6 +1243,16 @@
         this.editRedo = [];
         this.originalWorking = null;
 
+        // Script editor
+        this.scriptBuiltinPresets = this._createScriptBuiltinPresets();
+        this.scriptUserPresets = this._loadScriptUserPresets();
+        this.scriptEditors = {
+          global: this._createScriptEditorState('Global'),
+          instrument: this._createScriptEditorState('Instrument')
+        };
+        this.activeScriptContext = 'instrument';
+        this.activeScriptSlotIdx = 0;
+
         // Vertical view
         this.viewOffsetY = 0;
 
@@ -1148,6 +1276,7 @@
         this._initSyncSliceUI();
         this._initZoneEnvelopesUI();
         this._initSampleEditorUI();
+        this._initScriptEditorUI();
         this._tick();
       }
 
@@ -1197,6 +1326,9 @@
           if(f) this.loadFile(f);
           e.target.value = '';
         });
+        this.globalKspBtn.addEventListener('click', ()=>this._openScriptEditor('global'));
+        this.instrumentScriptBtn.addEventListener('click', ()=>this._openScriptEditor('instrument'));
+        this.scriptEditorCloseBtn.addEventListener('click', ()=>this._closeScriptEditor());
 
         // Side strip
         this.zoomYPlus.addEventListener('click', ()=>{ this.zoomY = Math.min(10, this.zoomY*1.25); this.needsRedraw=true; });
@@ -1932,6 +2064,411 @@
       _seUndoOp(){ if(!this.editUndo.length) return; this.editRedo.push(this._seSnapshot()); this._seRestoreSnapshot(this.editUndo.pop()); }
       _seRedoOp(){ if(!this.editRedo.length) return; this.editUndo.push(this._seSnapshot()); this._seRestoreSnapshot(this.editRedo.pop()); }
       _seRestoreOrig(){ if(!this.originalWorking) return; this._sePushUndo(); this.workingChannels=this.originalWorking.map(ch=>new Float32Array(ch)); this._rebuildBufferFromWorking(); this.editSel=null; this.editCursorT=0; this._syncSampleSelectionFields(); this.needsRedraw=true; }
+
+
+      _createScriptBuiltinPresets(){
+        return {
+          'Midi Echo': `// Simple echo: adds delayed repeats for noteOn
+exports.onInit = (api)=>{ api.state.delayMs = 140; api.state.repeats = 2; };
+exports.onNoteOn = (e, api)=>{
+  const out = {...e};
+  out.echo = { delayMs: api.state.delayMs, repeats: api.state.repeats };
+  return out;
+};
+exports.onUI = (api)=>({
+  type:'row',
+  children:[
+    {type:'label', text:'Echo repeats'},
+    {type:'slider', key:'repeats', min:0, max:6, step:1, label:'Repeats'}
+  ]
+});`,
+          'Unison': `// make_perfview
+// on init
+// make_perfview
+// end on
+exports.onInit = (api)=>{ api.state.detune = 0.1; api.makePerfView(); };
+exports.onNoteOn = (e, api)=>({ ...e, unisonVoices: 2, detune: api.state.detune });
+exports.onUI = (api)=>({
+  type:'row',
+  children:[
+    {type:'label', text:'Unison detune'},
+    {type:'slider', key:'detune', min:0, max:0.5, step:0.01, label:'Detune'}
+  ]
+});`,
+          'Arp': `exports.onInit = (api)=>{ api.state.step = 0; api.state.pattern = [0,4,7,12]; };
+exports.onNoteOn = (e, api)=>{
+  const p = api.state.pattern;
+  const step = api.state.step % p.length;
+  api.state.step = step + 1;
+  return { ...e, note: e.note + p[step] };
+};
+exports.onUI = (api)=>({type:'label', text:'Arp running (pattern: 0,4,7,12)'});`
+        };
+      }
+
+      _loadScriptUserPresets(){
+        try{
+          const raw = localStorage.getItem('waveEditorScriptPresets');
+          const arr = raw ? JSON.parse(raw) : [];
+          return Array.isArray(arr) ? arr : [];
+        }catch{
+          return [];
+        }
+      }
+
+      _saveScriptUserPresets(){
+        localStorage.setItem('waveEditorScriptPresets', JSON.stringify(this.scriptUserPresets));
+      }
+
+      _createScriptEditorState(name){
+        return { name, slots: Array.from({length:5}, ()=>({
+          label:'empty',
+          bypass:false,
+          sourceDraft:'',
+          sourceRunning:'',
+          compiled:null,
+          locked:false,
+          password:null,
+          unlocked:true,
+          settings:{},
+          perfEnabled:false,
+          perfByToken:false,
+          lastError:''
+        }))};
+      }
+
+      _currentScriptEditor(){ return this.scriptEditors[this.activeScriptContext]; }
+      _currentScriptSlot(){ return this._currentScriptEditor().slots[this.activeScriptSlotIdx]; }
+
+      _initScriptEditorUI(){
+        this._renderScriptSlotTabs();
+        this._refreshScriptPresetDropdown();
+
+        this.scriptBypassBtn.addEventListener('click', ()=>{
+          const slot = this._currentScriptSlot();
+          slot.bypass = !slot.bypass;
+          this.scriptBypassBtn.setAttribute('aria-pressed', String(slot.bypass));
+          this._refreshScriptSlotTabs();
+          this._refreshPerformanceView();
+        });
+        this.scriptLoadPresetBtn.addEventListener('click', ()=>this._loadSelectedScriptPreset());
+        this.scriptSavePresetBtn.addEventListener('click', ()=>this._saveCurrentScriptPreset());
+        this.scriptEditBtn.addEventListener('click', ()=>{
+          this.scriptCodePanel.classList.toggle('open');
+          this._refreshScriptEditorFields();
+        });
+        this.scriptApplyBtn.addEventListener('click', ()=>this._applyCurrentScriptSource());
+        this.scriptLockBtn.addEventListener('click', ()=>this._handleScriptLockButton());
+
+        this._refreshScriptPanel();
+        this._refreshPerformanceView();
+      }
+
+      _renderScriptSlotTabs(){
+        this.scriptSlotTabs.innerHTML = '';
+        for(let i=0;i<5;i++){
+          const b = document.createElement('button');
+          b.className = 'scriptSlot';
+          b.addEventListener('click', ()=>{ this.activeScriptSlotIdx = i; this._refreshScriptPanel(); });
+          this.scriptSlotTabs.appendChild(b);
+        }
+        this._refreshScriptSlotTabs();
+      }
+
+      _refreshScriptSlotTabs(){
+        const slots = this._currentScriptEditor().slots;
+        Array.from(this.scriptSlotTabs.children).forEach((el,i)=>{
+          const s = slots[i];
+          el.classList.toggle('active', i===this.activeScriptSlotIdx);
+          el.textContent = s.label || 'empty';
+          el.title = s.bypass ? 'Bypassed' : 'Active';
+          el.style.opacity = s.bypass ? '0.55' : '1';
+        });
+      }
+
+      _refreshScriptPresetDropdown(){
+        this.scriptPresetSelect.innerHTML = '';
+        const add = (value, label)=>{
+          const o = document.createElement('option');
+          o.value = value; o.textContent = label; this.scriptPresetSelect.appendChild(o);
+        };
+        add('', 'Preset…');
+        Object.keys(this.scriptBuiltinPresets).forEach(k=>add('builtin:'+k, k));
+        this.scriptUserPresets.forEach(p=>add('user:'+p.name, `User: ${p.name}`));
+      }
+
+      _openScriptEditor(context){
+        this.activeScriptContext = context;
+        this.scriptEditorTitle.textContent = context==='global' ? 'Global Script Editor (KSP)' : 'Instrument Script Editor';
+        this.scriptEditorPanel.classList.add('open');
+        this._refreshScriptPanel();
+      }
+
+      _closeScriptEditor(){ this.scriptEditorPanel.classList.remove('open'); }
+
+      _refreshScriptPanel(){
+        this._refreshScriptSlotTabs();
+        const slot = this._currentScriptSlot();
+        this.scriptBypassBtn.setAttribute('aria-pressed', String(slot.bypass));
+        this._refreshScriptEditorFields();
+        this._renderScriptSlotUI();
+      }
+
+      _refreshScriptEditorFields(){
+        const slot = this._currentScriptSlot();
+        this.scriptStatusMsg.textContent = slot.lastError || '';
+        this.scriptCompileMsg.textContent = '';
+        const showCode = this.scriptCodePanel.classList.contains('open');
+        if(!showCode) return;
+
+        if(slot.locked && !slot.unlocked){
+          this.scriptSource.value = 'Source is locked. Unlock with password to view or edit.';
+          this.scriptSource.disabled = true;
+          this.scriptApplyBtn.disabled = true;
+          this.scriptLockBtn.textContent = 'Unlock';
+        }else{
+          this.scriptSource.disabled = false;
+          this.scriptApplyBtn.disabled = false;
+          this.scriptSource.value = slot.sourceDraft || slot.sourceRunning || '';
+          this.scriptLockBtn.textContent = slot.locked ? 'Lock (active)' : 'Lock with Password';
+        }
+      }
+
+      _handleScriptLockButton(){
+        const slot = this._currentScriptSlot();
+        if(slot.locked && !slot.unlocked){
+          const p = prompt('Enter script password');
+          if(p === slot.password){
+            slot.unlocked = true;
+            this.scriptCompileMsg.textContent = 'Unlocked source editor.';
+          }else{
+            this.scriptCompileMsg.textContent = 'Wrong password.';
+          }
+          this._refreshScriptEditorFields();
+          return;
+        }
+
+        if(!slot.locked){
+          const p1 = prompt('Set password');
+          if(!p1){ this.scriptCompileMsg.textContent = 'Lock canceled.'; return; }
+          const p2 = prompt('Re-enter password');
+          if(p1 !== p2){ this.scriptCompileMsg.textContent = 'Passwords did not match.'; return; }
+          slot.locked = true;
+          slot.password = p1;
+          slot.unlocked = false;
+          this.scriptCompileMsg.textContent = 'Source locked.';
+          this._refreshScriptEditorFields();
+          return;
+        }
+
+        this.scriptCompileMsg.textContent = 'Script already locked and currently unlocked in this session.';
+      }
+
+      _loadSelectedScriptPreset(){
+        const v = this.scriptPresetSelect.value;
+        if(!v) return;
+        const slot = this._currentScriptSlot();
+        let source = '';
+        let name = '';
+        if(v.startsWith('builtin:')){
+          name = v.slice(8);
+          source = this.scriptBuiltinPresets[name] || '';
+        }else if(v.startsWith('user:')){
+          name = v.slice(5);
+          const p = this.scriptUserPresets.find(x=>x.name===name);
+          if(!p) return;
+          source = p.source || '';
+          slot.settings = {...(p.settings||{})};
+        }
+        slot.sourceDraft = source;
+        slot.label = name || 'empty';
+        this._applyCurrentScriptSource(true);
+      }
+
+      _saveCurrentScriptPreset(){
+        const slot = this._currentScriptSlot();
+        const name = prompt('Preset name');
+        if(!name) return;
+        const source = slot.sourceRunning || slot.sourceDraft || '';
+        const idx = this.scriptUserPresets.findIndex(p=>p.name===name);
+        const payload = { name, source, settings: {...slot.settings, bypass:slot.bypass} };
+        if(idx>=0) this.scriptUserPresets[idx] = payload; else this.scriptUserPresets.push(payload);
+        this._saveScriptUserPresets();
+        this._refreshScriptPresetDropdown();
+        this.scriptCompileMsg.textContent = `Saved preset ${name}.`;
+      }
+
+      _applyCurrentScriptSource(fromPreset=false){
+        const slot = this._currentScriptSlot();
+        const source = fromPreset ? (slot.sourceDraft || '') : this.scriptSource.value;
+        if(!fromPreset) slot.sourceDraft = source;
+
+        const compiled = this._compileScriptSlot(source, slot);
+        if(!compiled.ok){
+          slot.lastError = compiled.error;
+          this.scriptCompileMsg.textContent = `Compile error: ${compiled.error}`;
+          this._refreshScriptEditorFields();
+          return;
+        }
+
+        slot.compiled = compiled.module;
+        slot.sourceRunning = source;
+        slot.lastError = '';
+        slot.perfByToken = this._hasPerfViewToken(source);
+        slot.perfEnabled = slot.perfByToken;
+        try{ slot.compiled.onInit?.(compiled.api); }catch(err){ slot.lastError = String(err); }
+        this.scriptCompileMsg.textContent = 'Applied successfully.';
+        this._refreshScriptSlotTabs();
+        this._renderScriptSlotUI();
+        this._refreshPerformanceView();
+      }
+
+      _compileScriptSlot(source, slot){
+        try{
+          const api = this._createScriptApi(slot);
+          const body = `'use strict'; const window=undefined, document=undefined, fetch=undefined, XMLHttpRequest=undefined, WebSocket=undefined, navigator=undefined, eval=undefined, Function=undefined, globalThis=undefined; let exports = {};
+${source}
+; return exports;`;
+          const fn = new Function('api', body);
+          const mod = fn(api) || {};
+          const module = {
+            onInit: typeof mod.onInit==='function' ? mod.onInit : null,
+            onNoteOn: typeof mod.onNoteOn==='function' ? mod.onNoteOn : null,
+            onNoteOff: typeof mod.onNoteOff==='function' ? mod.onNoteOff : null,
+            onCC: typeof mod.onCC==='function' ? mod.onCC : null,
+            onUI: typeof mod.onUI==='function' ? mod.onUI : null
+          };
+          return {ok:true, module, api};
+        }catch(err){
+          return {ok:false, error:String(err)};
+        }
+      }
+
+      _hasPerfViewToken(source){
+        return /on\s+init[\s\S]*make[_ ]perfview[\s\S]*end\s+on/i.test(source) || /make_perfview|makePerfView\(/i.test(source);
+      }
+
+      _createScriptApi(slot){
+        return {
+          state: slot.settings,
+          setParam:(id,v)=>{ slot.settings[id]=v; },
+          getParam:(id,d=0)=> (id in slot.settings ? slot.settings[id] : d),
+          makePerfView:()=>{ slot.perfEnabled = true; },
+          log:(msg)=>{ this.scriptStatusMsg.textContent = String(msg); }
+        };
+      }
+
+      _renderScriptSlotUI(){
+        const slot = this._currentScriptSlot();
+        this.scriptUiArea.innerHTML = '';
+        const info = document.createElement('div');
+        info.style.fontSize = '12px';
+        info.style.color = 'var(--muted2)';
+        info.textContent = `Slot ${this.activeScriptSlotIdx+1} • ${slot.label || 'empty'}${slot.bypass ? ' (bypassed)' : ''}`;
+        this.scriptUiArea.appendChild(info);
+
+        const testRow = document.createElement('div');
+        testRow.className = 'row';
+        testRow.style.marginTop = '8px';
+        testRow.innerHTML = `<button class="btn" data-midi="noteOn">Test NoteOn</button><button class="btn" data-midi="noteOff">Test NoteOff</button><button class="btn" data-midi="cc">Test CC</button>`;
+        testRow.addEventListener('click', (e)=>{
+          const b = e.target.closest('[data-midi]');
+          if(!b) return;
+          const type = b.dataset.midi;
+          const base = type==='cc' ? {type:'cc', cc:1, value:64, channel:1} : {type, note:60, velocity:100, channel:1};
+          const out = this._processScriptEvent(base);
+          this.scriptStatusMsg.textContent = out ? `Output: ${JSON.stringify(out)}` : 'Output: dropped';
+        });
+        this.scriptUiArea.appendChild(testRow);
+
+        if(slot.compiled?.onUI){
+          try{
+            const ui = slot.compiled.onUI(this._createScriptApi(slot));
+            const node = this._normalizeScriptUI(ui, slot);
+            if(node) this.scriptUiArea.appendChild(node);
+          }catch(err){
+            this.scriptStatusMsg.textContent = `UI error: ${String(err)}`;
+          }
+        }
+      }
+
+      _normalizeScriptUI(ui, slot){
+        if(!ui) return null;
+        if(ui instanceof HTMLElement) return ui;
+        if(typeof ui === 'string'){ const d=document.createElement('div'); d.textContent = ui; return d; }
+        if(ui.type === 'label'){ const d=document.createElement('div'); d.style.fontSize='12px'; d.textContent = ui.text || ''; return d; }
+        if(ui.type === 'row' && Array.isArray(ui.children)){
+          const r = document.createElement('div'); r.className='row'; r.style.flexWrap='wrap';
+          ui.children.forEach(c=>{ const n=this._normalizeScriptUI(c, slot); if(n) r.appendChild(n); });
+          return r;
+        }
+        if(ui.type === 'slider'){
+          const wrap = document.createElement('label'); wrap.style.fontSize='12px'; wrap.style.display='inline-flex'; wrap.style.alignItems='center'; wrap.style.gap='6px';
+          const inp = document.createElement('input'); inp.type='range'; inp.min=String(ui.min ?? 0); inp.max=String(ui.max ?? 1); inp.step=String(ui.step ?? 0.01);
+          const key = ui.key || 'value';
+          if(!(key in slot.settings)) slot.settings[key] = Number(ui.min ?? 0);
+          inp.value = String(slot.settings[key]);
+          const out = document.createElement('span'); out.textContent = String(slot.settings[key]); out.style.fontFamily='var(--mono)'; out.style.fontSize='11px';
+          inp.addEventListener('input', ()=>{ slot.settings[key]=Number(inp.value); out.textContent=inp.value; this._refreshPerformanceView(); });
+          wrap.append(ui.label || key, inp, out);
+          return wrap;
+        }
+        return null;
+      }
+
+      _processScriptEvent(event){
+        let ev = {...event};
+        // Global scripts run before Instrument scripts so instrument slots can consume globally transformed events.
+        for(const ctx of ['global','instrument']){
+          const ed = this.scriptEditors[ctx];
+          for(const slot of ed.slots){
+            if(!slot.compiled || slot.bypass) continue;
+            const hook = ev.type==='noteOn' ? slot.compiled.onNoteOn : ev.type==='noteOff' ? slot.compiled.onNoteOff : slot.compiled.onCC;
+            if(!hook) continue;
+            let out = hook({...ev}, this._createScriptApi(slot));
+            if(out == null) return null;
+            if(typeof out === 'object') ev = out;
+          }
+        }
+        return ev;
+      }
+
+      _refreshPerformanceView(){
+        this.perfViewContentEl.innerHTML = '';
+        let count = 0;
+        for(const ctx of ['global','instrument']){
+          const ed = this.scriptEditors[ctx];
+          ed.slots.forEach((slot, idx)=>{
+            if(!slot.compiled || slot.bypass || !slot.perfEnabled) return;
+            const card = document.createElement('div');
+            card.style.border = '1px solid rgba(255,255,255,.12)';
+            card.style.borderRadius = '6px';
+            card.style.padding = '6px';
+            card.style.background = 'rgba(0,0,0,.18)';
+            const title = document.createElement('div');
+            title.style.fontSize = '11px';
+            title.style.color = 'var(--muted2)';
+            title.textContent = `${ctx} slot ${idx+1}: ${slot.label || 'empty'}`;
+            card.appendChild(title);
+            if(slot.compiled.onUI){
+              try{
+                const ui = slot.compiled.onUI(this._createScriptApi(slot));
+                const node = this._normalizeScriptUI(ui, slot);
+                if(node) card.appendChild(node);
+              }catch{}
+            }
+            this.perfViewContentEl.appendChild(card);
+            count++;
+          });
+        }
+        if(!count){
+          const empty = document.createElement('span');
+          empty.style.color = 'var(--muted2)';
+          empty.style.fontSize = '12px';
+          empty.textContent = 'No script controls visible.';
+          this.perfViewContentEl.appendChild(empty);
+        }
+      }
 
       _initCanvas(){
         const resize = ()=>{
