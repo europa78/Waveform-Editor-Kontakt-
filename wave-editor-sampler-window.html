@@ -407,6 +407,11 @@
       font-family:var(--mono);
       user-select:none;
     }
+    .slot.on{
+      color: #dcecff;
+      background: linear-gradient(180deg, rgba(110,170,235,.70), rgba(70,120,180,.62));
+      border-color: rgba(120,180,255,.45);
+    }
     .slot.active{
       color: #0b1016;
       background: linear-gradient(180deg, rgba(242,193,78,.95), rgba(242,193,78,.70));
@@ -647,7 +652,7 @@
       <div class="lower">
         <div class="tabsWrap">
           <div class="tabs" role="tablist" aria-label="wave editor tabs">
-            <div class="tab active" data-tab="loop" role="tab" aria-selected="true">Sample Loop</div>
+            <div class="tab active" data-tab="loop" role="tab" aria-selected="true">Sample Loop <button class="miniToggle" id="loopGlobalPower" aria-pressed="true" title="Global loop power">⟲</button></div>
             <div class="tab" data-tab="sync" role="tab" aria-selected="false">Sync / Slice</div>
             <div class="tab" data-tab="env" role="tab" aria-selected="false">Zone Envelopes</div>
             <div class="tab" data-tab="edit" role="tab" aria-selected="false">Sample Editor</div>
@@ -692,17 +697,27 @@
                 </div>
 
                 <div class="field">
-                  <div class="lbl">X-Fade / Mode</div>
+                  <div class="lbl">Loop Controls</div>
+                  <div class="row" style="margin-bottom:6px;">
+                    <button class="miniToggle" id="loopSlotPower" aria-pressed="true">Power</button>
+                    <button class="miniToggle" id="loopEditToggle" aria-pressed="false">Loop Edit</button>
+                  </div>
+                  <div class="row" style="margin-bottom:6px;">
+                    <input class="num" id="xfadeSamples" inputmode="numeric" value="0" title="Crossfade (ms)" style="width:80px;" />
+                    <input class="num" id="loopTune" inputmode="numeric" value="0" title="Tune" style="width:72px;" />
+                    <input class="num" id="loopCount" inputmode="numeric" value="0" title="Count" style="width:72px;" />
+                  </div>
                   <div class="row">
-                    <input class="num" id="xfadeSamples" inputmode="numeric" value="0" title="Crossfade (samples)" />
                     <select class="select" id="loopMode">
-                      <option value="untilEnd">until end</option>
-                      <option value="oneShot">one-shot</option>
-                      <option value="pingPong">ping-pong</option>
+                      <option value="untilEnd">Until End</option>
+                      <option value="untilEndPingPong">Until End ↔</option>
+                      <option value="untilRelease">Until Release</option>
+                      <option value="untilReleasePingPong">Until Release ↔</option>
+                      <option value="oneShot">One Shot</option>
                     </select>
                   </div>
                   <div class="small" style="margin-top:6px;color:var(--muted2);">
-                    Drag the yellow loop markers in the waveform view.
+                    Drag loop borders/region; right-drag creates loop in selected slot.
                   </div>
                 </div>
               </div>
@@ -853,6 +868,11 @@
         this.loopEndTimeEl = document.querySelector('#loopEndTime');
         this.xfadeSamplesEl = document.querySelector('#xfadeSamples');
         this.loopModeEl = document.querySelector('#loopMode');
+        this.loopTuneEl = document.querySelector('#loopTune');
+        this.loopCountEl = document.querySelector('#loopCount');
+        this.loopSlotPowerBtn = document.querySelector('#loopSlotPower');
+        this.loopGlobalPowerBtn = document.querySelector('#loopGlobalPower');
+        this.loopEditToggleBtn = document.querySelector('#loopEditToggle');
 
         this.nudgeLoopStartMinus = document.querySelector('#nudgeLoopStartMinus');
         this.nudgeLoopStartPlus  = document.querySelector('#nudgeLoopStartPlus');
@@ -913,10 +933,16 @@
         this.loopSlots = Array.from({length:8}, (_,i)=>({
           start: 0.0,
           end: 1.0,
-          xfade: 0,
-          mode: 'untilEnd'
+          xfadeMs: 0,
+          tune: 0,
+          count: 0,
+          mode: 'untilEnd',
+          active: i===0
         }));
         this.activeSlot = 0;
+        this.loopGlobalPower = true;
+        this.loopEditView = false;
+        this.currentTab = 'loop';
 
         // Snapping options
         this.snapLoopMode = 'none';      // 'none' | 'zero' | 'value'
@@ -1056,7 +1082,14 @@
           el.addEventListener('click', ()=>{
             const idx = Number(el.dataset.slot);
             this.activeSlot = idx;
-            this.slotEls.forEach(s=>s.classList.toggle('active', Number(s.dataset.slot)===idx));
+            const L = this.loopSlots[idx];
+            if(!L.active){
+              L.active = true;
+              if(!Number.isFinite(L.end) || L.end <= L.start){
+                L.start = this.zoneStart;
+                L.end = Math.min(this.zoneEnd, this.zoneStart + Math.max(0.02, (this.zoneEnd-this.zoneStart)*0.25));
+              }
+            }
             this._renderLoopPanel();
             this.needsRedraw = true;
             if(this._isPressed(this.autoPrelisten)) this._prelistenLoop();
@@ -1074,12 +1107,43 @@
         onNum(this.loopStartSamplesEl, (n)=>this._setLoopStartSamples(n));
         onNum(this.loopEndSamplesEl, (n)=>this._setLoopEndSamples(n));
         onNum(this.xfadeSamplesEl, (n)=>{
-          this._activeLoop().xfade = Math.max(0, Math.floor(n));
+          const L = this._activeLoop();
+          if(!L) return;
+          L.xfadeMs = Math.max(0, n);
+          this._renderLoopPanel();
+          this.needsRedraw = true;
+        });
+        onNum(this.loopTuneEl, (n)=>{ const L=this._activeLoop(); if(!L) return; L.tune=n; this._renderLoopPanel(); });
+        onNum(this.loopCountEl, (n)=>{ const L=this._activeLoop(); if(!L) return; L.count=Math.max(0, Math.floor(n)); this._renderLoopPanel(); });
+        this.loopModeEl.addEventListener('change', ()=>{
+          const L = this._activeLoop();
+          if(!L) return;
+          L.mode = this.loopModeEl.value;
           this._renderLoopPanel();
         });
-        this.loopModeEl.addEventListener('change', ()=>{
-          this._activeLoop().mode = this.loopModeEl.value;
+        this._bindDragNumeric(this.loopStartSamplesEl, { get:()=>Number(this.loopStartSamplesEl.value||0), set:(v)=>this._setLoopStartSamples(v), step:20 });
+        this._bindDragNumeric(this.loopEndSamplesEl,   { get:()=>Number(this.loopEndSamplesEl.value||0), set:(v)=>this._setLoopEndSamples(v), step:20 });
+        this._bindDragNumeric(this.xfadeSamplesEl,     { get:()=>Number(this.xfadeSamplesEl.value||0), set:(v)=>{ const L=this._activeLoop(); if(!L)return; L.xfadeMs=Math.max(0,v); }, step:0.5 });
+        this._bindDragNumeric(this.loopTuneEl,         { get:()=>Number(this.loopTuneEl.value||0), set:(v)=>{ const L=this._activeLoop(); if(!L)return; L.tune=v; }, step:0.5 });
+        this._bindDragNumeric(this.loopCountEl,        { get:()=>Number(this.loopCountEl.value||0), set:(v)=>{ const L=this._activeLoop(); if(!L)return; L.count=Math.max(0,Math.floor(v)); }, step:0.2 });
+        this.loopSlotPowerBtn.addEventListener('click', ()=>{
+          const L = this._activeLoop();
+          if(!L) return;
+          L.active = !L.active;
+          if(!L.active) this.activeSlot = this.loopSlots.findIndex(x=>x.active);
           this._renderLoopPanel();
+          this.needsRedraw = true;
+        });
+        this.loopGlobalPowerBtn.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          this.loopGlobalPower = !this.loopGlobalPower;
+          this.loopGlobalPowerBtn.setAttribute('aria-pressed', String(this.loopGlobalPower));
+          this.needsRedraw = true;
+        });
+        this.loopEditToggleBtn.addEventListener('click', ()=>{
+          this.loopEditView = !this.loopEditView;
+          this.loopEditToggleBtn.setAttribute('aria-pressed', String(this.loopEditView));
+          this.needsRedraw = true;
         });
 
         // Nudges
@@ -1094,6 +1158,7 @@
             this.tabEls.forEach(x=>x.classList.remove('active'));
             t.classList.add('active');
             const which = t.dataset.tab;
+            this.currentTab = which;
             if(which==='loop'){
               this.panelLoop.style.display = '';
               this.panelOther.style.display = 'none';
@@ -1142,6 +1207,29 @@
         });
       }
 
+
+      _bindDragNumeric(el, {get, set, step=1}){
+        el.readOnly = true;
+        let drag = null;
+        el.addEventListener('dblclick', ()=>{ el.readOnly = false; el.focus(); el.select?.(); });
+        el.addEventListener('blur', ()=>{ el.readOnly = true; });
+        el.addEventListener('pointerdown', (e)=>{
+          if(!el.readOnly || e.button!==0) return;
+          drag = { y:e.clientY, v:get() };
+          el.setPointerCapture?.(e.pointerId);
+          e.preventDefault();
+        });
+        el.addEventListener('pointermove', (e)=>{
+          if(!drag) return;
+          const dy = drag.y - e.clientY;
+          const v = drag.v + dy * step;
+          set(v);
+          this._renderLoopPanel();
+          this.needsRedraw = true;
+        });
+        el.addEventListener('pointerup', ()=>{ drag = null; });
+      }
+
       _initCanvas(){
         const resize = ()=>{
           const r = this.wavePane.getBoundingClientRect();
@@ -1161,6 +1249,7 @@
         window.addEventListener('pointermove', (e)=>this._onPointerMove(e));
         window.addEventListener('pointerup', (e)=>this._onPointerUp(e));
         this.wavePane.addEventListener('wheel', (e)=>this._onWheel(e), {passive:false});
+        this.wavePane.addEventListener('contextmenu', (e)=>e.preventDefault());
       }
 
       _initAudioDemo(){
@@ -1411,10 +1500,11 @@
 
         const loopOn = this._isPressed(this.loopToggle);
         const L = this._activeLoop();
+        const oneShotFirst = this.loopSlots[0]?.active && this.loopSlots[0]?.mode === 'oneShot';
 
         // Zone-constrained playback (for normal play and loop play)
-        let start = loopOn ? Math.max(this.zoneStart, L.start) : this.zoneStart;
-        let end = loopOn ? Math.min(this.zoneEnd, L.end) : this.zoneEnd;
+        let start = (loopOn && this.loopGlobalPower && L?.active && !oneShotFirst) ? Math.max(this.zoneStart, L.start) : this.zoneStart;
+        let end = (loopOn && this.loopGlobalPower && L?.active && !oneShotFirst) ? Math.min(this.zoneEnd, L.end) : this.zoneEnd;
 
         start = this._clamp(start, 0, this.buffer.duration);
         end = this._clamp(end, 0, this.buffer.duration);
@@ -1426,7 +1516,7 @@
         const src = this.audioCtx.createBufferSource();
         src.buffer = this.buffer;
 
-        if(loopOn){
+        if(loopOn && this.loopGlobalPower && L?.active && !oneShotFirst){
           src.loop = true;
           src.loopStart = start;
           src.loopEnd = end;
@@ -1438,7 +1528,7 @@
 
         // Start from region offset (note: duration arg is optional; for one-shot we pass it)
         try{
-          if(loopOn){
+          if(src.loop){
             src.start(0, start);
           }else{
             src.start(0, start, end - start);
@@ -1485,8 +1575,8 @@
         let t = 0;
         if(which==='zoneStart') t = this.zoneStart;
         if(which==='zoneEnd')   t = this.zoneEnd;
-        if(which==='loopStart') t = L.start;
-        if(which==='loopEnd')   t = L.end;
+        if(which==='loopStart' && L) t = L.start;
+        if(which==='loopEnd' && L)   t = L.end;
 
         // Center view around t (except for zone edges where we align to edge)
         if(which==='zoneStart'){
@@ -1507,6 +1597,7 @@
 
       _zoomOnLoop(){
         const L = this._activeLoop();
+        if(!L) return;
         const len = Math.max(0.001, L.end - L.start);
         const pad = len * 0.08;
         this._pushZoom();
@@ -1580,6 +1671,8 @@
 
       /* ============================= POINTER / MARKERS ============================= */
 
+      _isLoopTabActive(){ return this.currentTab === "loop"; }
+
       _onPointerDown(e){
         const magnifyActive = this.magnify || e.altKey;
 
@@ -1593,6 +1686,30 @@
           this.drag = { type:'frame', x0:x, y0:y, x1:x, y1:y, wasClick:true };
           this.needsRedraw = true;
           return;
+        }
+
+        if(this._isLoopTabActive()){
+          const L = this._activeLoop();
+          if(e.button === 2){
+            const idx = (this.activeSlot != null && this.activeSlot >= 0) ? this.activeSlot : 0;
+            this.activeSlot = idx;
+            this.loopSlots[idx].active = true;
+            this.drag = { type:'quickLoopCreate', x0:x, x1:x };
+            this.needsRedraw = true;
+            return;
+          }
+          if(this.loopEditView && y > 24 && L?.active){
+            this.drag = { type: x < (this.wavePane.clientWidth/2) ? 'loopEditEnd':'loopEditStart', x0:x, t0:this._xToTime(x) };
+            return;
+          }
+          if(L?.active){
+            const lS = this._timeToX(L.start);
+            const lE = this._timeToX(L.end);
+            if(x > Math.min(lS,lE)+8 && x < Math.max(lS,lE)-8 && y > 24){
+              this.drag = { type:'loopMove', x0:x, start0:L.start, end0:L.end };
+              return;
+            }
+          }
         }
 
         if(this.gridPower && this.gridTool==='add' && y > 24){
@@ -1643,28 +1760,68 @@
           this.zoneStart = this._snapSampleMarkerIfNeeded(t);
           this.zoneStart = this._clamp(this.zoneStart, 0, this.zoneEnd - 1/this.sampleRate);
           const L = this._activeLoop();
-          L.start = Math.max(L.start, this.zoneStart);
-          L.end = Math.max(L.end, L.start + 1/this.sampleRate);
+          if(L){
+            L.start = Math.max(L.start, this.zoneStart);
+            L.end = Math.max(L.end, L.start + 1/this.sampleRate);
+          }
           this._rebuildGridMarkers();
         }
         if(this.drag.type === 'zoneEnd'){
           this.zoneEnd = this._snapSampleMarkerIfNeeded(t);
           this.zoneEnd = this._clamp(this.zoneEnd, this.zoneStart + 1/this.sampleRate, this.buffer?.duration ?? Infinity);
           const L = this._activeLoop();
-          L.end = Math.min(L.end, this.zoneEnd);
-          L.start = Math.min(L.start, L.end - 1/this.sampleRate);
+          if(L){
+            L.end = Math.min(L.end, this.zoneEnd);
+            L.start = Math.min(L.start, L.end - 1/this.sampleRate);
+          }
           this._clampViewToZone();
           this._rebuildGridMarkers();
         }
         if(this.drag.type === 'loopStart'){
           const L = this._activeLoop();
-          const snapped = this._snapLoopMarkerIfNeeded(t, 'start');
-          L.start = this._clamp(snapped, this.zoneStart, L.end - 1/this.sampleRate);
+          if(L){
+            const snapped = this._snapToGridMarkerIfNeeded(this._snapLoopMarkerIfNeeded(t, 'start'));
+            L.start = this._clamp(snapped, this.zoneStart, L.end - 1/this.sampleRate);
+          }
         }
         if(this.drag.type === 'loopEnd'){
           const L = this._activeLoop();
-          const snapped = this._snapLoopMarkerIfNeeded(t, 'end');
-          L.end = this._clamp(snapped, L.start + 1/this.sampleRate, this.zoneEnd);
+          if(L){
+            const snapped = this._snapToGridMarkerIfNeeded(this._snapLoopMarkerIfNeeded(t, 'end'));
+            L.end = this._clamp(snapped, L.start + 1/this.sampleRate, this.zoneEnd);
+          }
+        }
+        if(this.drag.type === 'loopMove'){
+          const L = this._activeLoop();
+          if(L){
+            const dt = this._xToTime(x) - this._xToTime(this.drag.x0);
+            const len = this.drag.end0 - this.drag.start0;
+            let ns = this.drag.start0 + dt;
+            ns = this._clamp(ns, this.zoneStart, this.zoneEnd - len);
+            L.start = this._snapToGridMarkerIfNeeded(ns);
+            L.end = this._clamp(L.start + len, L.start + 1/this.sampleRate, this.zoneEnd);
+          }
+        }
+        if(this.drag.type === 'loopEditEnd'){
+          const L = this._activeLoop();
+          if(L){
+            const dt = (x - this.drag.x0) / Math.max(1, this.wavePane.clientWidth) * (this.viewEnd - this.viewStart);
+            const v = this._snapToGridMarkerIfNeeded(L.end + dt);
+            L.end = this._clamp(v, L.start + 1/this.sampleRate, this.zoneEnd);
+            this.drag.x0 = x;
+          }
+        }
+        if(this.drag.type === 'loopEditStart'){
+          const L = this._activeLoop();
+          if(L){
+            const dt = (x - this.drag.x0) / Math.max(1, this.wavePane.clientWidth) * (this.viewEnd - this.viewStart);
+            const v = this._snapToGridMarkerIfNeeded(L.start + dt);
+            L.start = this._clamp(v, this.zoneStart, L.end - 1/this.sampleRate);
+            this.drag.x0 = x;
+          }
+        }
+        if(this.drag.type === 'quickLoopCreate'){
+          this.drag.x1 = x;
         }
         const movingGridIdx = (this.drag.type.startsWith('gridMarker:') || this.drag.type.startsWith('gridHandle:')) ? Number(this.drag.type.split(':')[1]) : -1;
         if(movingGridIdx === 0){
@@ -1720,6 +1877,20 @@
           return;
         }
 
+        if(this.drag && this.drag.type === 'quickLoopCreate'){
+          const L = this._activeLoop();
+          if(L){
+            const xA = Math.min(this.drag.x0, this.drag.x1);
+            const xB = Math.max(this.drag.x0, this.drag.x1);
+            if(Math.abs(xB-xA) > 3){
+              L.start = this._snapToGridMarkerIfNeeded(this._clamp(this._xToTime(xA), this.zoneStart, this.zoneEnd));
+              L.end = this._snapToGridMarkerIfNeeded(this._clamp(this._xToTime(xB), L.start + 1/this.sampleRate, this.zoneEnd));
+              L.active = true;
+              this._renderLoopPanel();
+            }
+          }
+        }
+
         if(this.drag && this.drag.type.startsWith('gridHandle:') && this.gridTool==='move'){
           const idx = Number(this.drag.type.split(':')[1]);
           this._auditionGridSlice(idx);
@@ -1738,8 +1909,8 @@
         const zS = this._timeToX(this.zoneStart);
         const zE = this._timeToX(this.zoneEnd);
         const L = this._activeLoop();
-        const lS = this._timeToX(L.start);
-        const lE = this._timeToX(L.end);
+        const lS = L ? this._timeToX(L.start) : -9999;
+        const lE = L ? this._timeToX(L.end) : -9999;
         const near = (a,b,r=6)=>Math.abs(a-b) < r;
 
         if(this.gridPower){
@@ -1750,8 +1921,8 @@
           }
         }
 
-        if(near(x, lS)) return 'loopStart';
-        if(near(x, lE)) return 'loopEnd';
+        if(L && L.active && near(x, lS)) return 'loopStart';
+        if(L && L.active && near(x, lE)) return 'loopEnd';
         if(near(x, zS, 9) && y > this.wavePane.clientHeight - 34) return 'zoneStart';
         if(near(x, zE, 7)) return 'zoneEnd';
         return null;
@@ -1762,6 +1933,18 @@
       _snapSampleMarkerIfNeeded(time){
         if(!this.snapSampleToZero || !this.mono || !this.buffer) return time;
         return this._snapToZeroCrossing(time, null);
+      }
+
+      _snapToGridMarkerIfNeeded(time){
+        if(!this.gridPower || !this.gridMarkers?.length) return time;
+        let best = this._markerTime(this.gridMarkers[0]);
+        let dist = Math.abs(best - time);
+        for(let i=1;i<this.gridMarkers.length;i++){
+          const t = this._markerTime(this.gridMarkers[i]);
+          const d = Math.abs(t - time);
+          if(d < dist){ dist = d; best = t; }
+        }
+        return best;
       }
 
       _snapLoopMarkerIfNeeded(time, edge){
@@ -1862,6 +2045,7 @@
       _restoreLoopsFromSample(){
         const dur = this.buffer?.duration ?? this.zoneEnd;
         const L = this._activeLoop();
+        if(!L) return;
         L.start = this.zoneStart;
         L.end = this.zoneEnd;
         this._renderLoopPanel();
@@ -1873,6 +2057,7 @@
         if(!this.mono || !this.buffer) return;
 
         const L = this._activeLoop();
+        if(!L) return;
         const sr = this.sampleRate;
 
         const startIdx = this._timeToSampleIndex(L.start);
@@ -1950,6 +2135,7 @@
       _nudgeLoop(edge, deltaSamples){
         if(!this.buffer) return;
         const L = this._activeLoop();
+        if(!L) return;
         const dt = deltaSamples / this.sampleRate;
 
         if(edge === 'start'){
@@ -1960,8 +2146,8 @@
 
         // Apply snap (if enabled)
         if(this.snapLoopMode !== 'none'){
-          if(edge === 'start') L.start = this._snapLoopMarkerIfNeeded(L.start, 'start');
-          if(edge === 'end')   L.end   = this._snapLoopMarkerIfNeeded(L.end, 'end');
+          if(edge === 'start') L.start = this._snapToGridMarkerIfNeeded(this._snapLoopMarkerIfNeeded(L.start, 'start'));
+          if(edge === 'end')   L.end   = this._snapToGridMarkerIfNeeded(this._snapLoopMarkerIfNeeded(L.end, 'end'));
         }
 
         this._renderLoopPanel();
@@ -2141,11 +2327,29 @@
 
       /* ============================= LOOP PANEL SYNC ============================= */
 
-      _activeLoop(){ return this.loopSlots[this.activeSlot]; }
+      _activeLoop(){
+        if(this.activeSlot == null || this.activeSlot < 0) return null;
+        return this.loopSlots[this.activeSlot] ?? null;
+      }
 
       _renderLoopPanel(){
         if(!this.buffer) return;
         const L = this._activeLoop();
+
+        this.slotEls.forEach(el=>{
+          const idx = Number(el.dataset.slot);
+          const loop = this.loopSlots[idx];
+          el.classList.toggle('on', !!loop?.active);
+          el.classList.toggle('active', idx===this.activeSlot && !!loop?.active);
+        });
+
+        if(!L){
+          this.loopStartSamplesEl.value = '0';
+          this.loopEndSamplesEl.value = '0';
+          this.loopStartTimeEl.textContent = '0.000s';
+          this.loopEndTimeEl.textContent = '0.000s';
+          return;
+        }
 
         const s = Math.floor(L.start * this.sampleRate);
         const e = Math.floor(L.end * this.sampleRate);
@@ -2154,16 +2358,23 @@
         this.loopEndSamplesEl.value = String(e);
         this.loopStartTimeEl.textContent = L.start.toFixed(3) + 's';
         this.loopEndTimeEl.textContent = L.end.toFixed(3) + 's';
-        this.xfadeSamplesEl.value = String(L.xfade|0);
+        this.xfadeSamplesEl.value = String((L.xfadeMs ?? 0).toFixed(2));
         this.loopModeEl.value = L.mode;
+        this.loopTuneEl.value = String(L.tune ?? 0);
+        this.loopCountEl.value = String(L.count ?? 0);
+        this.loopSlotPowerBtn.setAttribute('aria-pressed', String(!!L.active));
+        this.loopGlobalPowerBtn.setAttribute('aria-pressed', String(this.loopGlobalPower));
+        this.loopEditToggleBtn.setAttribute('aria-pressed', String(this.loopEditView));
       }
 
       _setLoopStartSamples(n){
         if(!this.buffer) return;
         const L = this._activeLoop();
+        if(!L) return;
         const s = this._clamp(Math.floor(n), 0, this.mono.length-2);
         let t = s / this.sampleRate;
         t = this._snapLoopMarkerIfNeeded(t, 'start');
+        t = this._snapToGridMarkerIfNeeded(t);
         L.start = this._clamp(t, this.zoneStart, L.end - 1/this.sampleRate);
         this._renderLoopPanel();
         this.needsRedraw = true;
@@ -2172,9 +2383,11 @@
       _setLoopEndSamples(n){
         if(!this.buffer) return;
         const L = this._activeLoop();
+        if(!L) return;
         const e = this._clamp(Math.floor(n), 1, this.mono.length-1);
         let t = e / this.sampleRate;
         t = this._snapLoopMarkerIfNeeded(t, 'end');
+        t = this._snapToGridMarkerIfNeeded(t);
         L.end = this._clamp(t, L.start + 1/this.sampleRate, this.zoneEnd);
         this._renderLoopPanel();
         this.needsRedraw = true;
@@ -2300,16 +2513,26 @@
       }
 
       _drawRegions(ctx, W, y, h){
-        const L = this._activeLoop();
-        const lS = this._timeToX(L.start);
-        const lE = this._timeToX(L.end);
+        const Lsel = this._activeLoop();
 
         ctx.fillStyle = 'rgba(0,0,0,.10)';
         ctx.fillRect(0, y, W, h);
 
-        if(this._isPressed(this.loopToggle)){
-          ctx.fillStyle = 'rgba(242,193,78,.12)';
-          ctx.fillRect(Math.min(lS,lE), y, Math.abs(lE-lS), h);
+        if(this._isLoopTabActive() && this.loopGlobalPower){
+          for(let i=0;i<this.loopSlots.length;i++){
+            const L = this.loopSlots[i];
+            if(!L?.active) continue;
+            const lS = this._timeToX(L.start);
+            const lE = this._timeToX(L.end);
+            const isSel = i===this.activeSlot;
+            ctx.fillStyle = isSel ? 'rgba(242,193,78,.20)' : 'rgba(110,170,235,.12)';
+            ctx.fillRect(Math.min(lS,lE), y, Math.abs(lE-lS), h);
+          }
+        }
+
+        if(this._isPressed(this.loopToggle) && Lsel?.active && this.loopGlobalPower){
+          const lS = this._timeToX(Lsel.start);
+          const lE = this._timeToX(Lsel.end);
           ctx.strokeStyle = 'rgba(242,193,78,.45)';
           ctx.beginPath();
           ctx.moveTo(lS, y+h);
@@ -2317,6 +2540,14 @@
           ctx.moveTo(lE-18, y+h-18);
           ctx.lineTo(lE, y+h);
           ctx.stroke();
+
+          if((Lsel.xfadeMs ?? 0) > 0){
+            ctx.strokeStyle = 'rgba(255,220,140,.95)';
+            ctx.beginPath();
+            ctx.moveTo(lS, y+h-2);
+            ctx.lineTo(lS+14, y+h-18);
+            ctx.stroke();
+          }
         }
 
         const mid = y + h/2 + this.viewOffsetY * h;
@@ -2341,6 +2572,18 @@
           ctx.lineTo(W, yBottom + 0.5);
           ctx.stroke();
           ctx.setLineDash([]);
+        }
+
+        if(this.loopEditView && this._isLoopTabActive()){
+          const seam = W/2;
+          ctx.fillStyle = 'rgba(0,0,0,.28)';
+          ctx.fillRect(seam-1, y, 2, h);
+          ctx.fillStyle = 'rgba(255,255,255,.08)';
+          ctx.fillRect(0, y, seam, h);
+          ctx.fillStyle = 'rgba(255,255,255,.04)';
+          ctx.fillRect(seam, y, seam, h);
+          ctx.fillStyle = 'rgba(0,0,0,.20)';
+          ctx.fillRect(seam+20, y, seam-20, h);
         }
       }
 
@@ -2431,8 +2674,10 @@
 
         drawLine(this._timeToX(this.zoneStart), zoneStartColor, 'Zone Start', {bottomFlag:true});
         drawLine(this._timeToX(this.zoneEnd),   zoneEndColor, 'Zone End');
-        drawLine(this._timeToX(L.start), loopColor, 'Loop Start');
-        drawLine(this._timeToX(L.end),   loopColor, 'Loop End');
+        if(L?.active && this.loopGlobalPower){
+          drawLine(this._timeToX(L.start), loopColor, 'Loop Start');
+          drawLine(this._timeToX(L.end),   loopColor, 'Loop End');
+        }
 
         if(this.gridPower){
           ctx.font = '11px var(--mono)';
