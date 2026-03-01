@@ -509,6 +509,14 @@
     }
     .miniToggle[aria-pressed="true"]{ color: var(--txt); border-color: rgba(57,217,138,.45); }
 
+    .syncWrap{ display:grid; grid-template-columns: 1fr; gap:10px; }
+    .syncRow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .syncKeyboard{ border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:8px; background:rgba(0,0,0,.18); }
+    .kbGrid{ display:grid; grid-template-columns: repeat(24, minmax(18px,1fr)); gap:2px; }
+    .kbKey{ height:28px; border-radius:4px; border:1px solid rgba(255,255,255,.14); background:rgba(28,40,56,.75); }
+    .kbKey.black{ background:rgba(8,12,17,.85); height:20px; margin-top:0; }
+    .kbKey.mapped{ box-shadow: inset 0 0 0 2px rgba(242,193,78,.85); background: rgba(242,193,78,.35); }
+
     /* ---------- Toast ---------- */
     .toast{
       position:fixed;
@@ -724,6 +732,24 @@
             </div>
           </div>
 
+          <div class="panel" id="panelSync" style="display:none;">
+            <div class="syncWrap">
+              <div class="syncRow">
+                <span style="font-size:12px;color:var(--muted2);">Zone Length</span>
+                <input class="num" id="zoneLength" value="4" title="Zone length in beats" style="width:80px;" />
+                <select class="select" id="beatSpeedMode"><option value="zone">Zone</option><option value="1/4">1/4</option><option value="1/8">1/8</option><option value="default">Default</option></select>
+                <button class="miniToggle" id="useBeatmachine" aria-pressed="false">Use Beatmachine</button>
+                <button class="miniToggle" id="useTimemachine" aria-pressed="false">Use Timemachine Pro</button>
+              </div>
+              <div class="syncRow">
+                <button class="btn" id="autoMapSlices">Auto-map slices</button>
+                <button class="btn" id="dragMidiHost">Drag MIDI to Host</button>
+                <button class="btn" id="autoFindEmptyKeys">Auto Find Empty Keys</button>
+              </div>
+              <div class="syncKeyboard" id="syncKeyboard"><div class="kbGrid" id="kbGrid"></div></div>
+            </div>
+          </div>
+
           <div class="panel" id="panelOther" style="display:none;">
             <div style="color:var(--muted); font-size:13px; line-height:1.35;">
               This tab is a placeholder in this first build. Next iterations can add slicing/grid markers,
@@ -903,7 +929,18 @@
         // Tabs
         this.tabEls = Array.from(document.querySelectorAll('.tab'));
         this.panelLoop = document.querySelector('#panelLoop');
+        this.panelSync = document.querySelector('#panelSync');
         this.panelOther = document.querySelector('#panelOther');
+
+        this.zoneLengthEl = document.querySelector('#zoneLength');
+        this.beatSpeedModeEl = document.querySelector('#beatSpeedMode');
+        this.useBeatmachineBtn = document.querySelector('#useBeatmachine');
+        this.useTimemachineBtn = document.querySelector('#useTimemachine');
+        this.autoMapSlicesBtn = document.querySelector('#autoMapSlices');
+        this.dragMidiHostBtn = document.querySelector('#dragMidiHost');
+        this.autoFindEmptyKeysBtn = document.querySelector('#autoFindEmptyKeys');
+        this.syncKeyboard = document.querySelector('#syncKeyboard');
+        this.kbGrid = document.querySelector('#kbGrid');
 
         // Menus
         this.snapMenu = document.querySelector('#snapMenu');
@@ -965,6 +1002,17 @@
         this.gridTransientCandidates = [];
         this.gridTool = 'move';
 
+        // Sync/Slice
+        this.syncMode = 'none'; // none|beatmachine|timemachine
+        this.zoneLengthBeats = 4;
+        this.beatSpeedMode = 'zone';
+        this.syncAutoFindEmpty = false;
+        this.selectedSlices = new Set();
+        this.mappedZones = [];
+        this._beatTimer = null;
+        this._beatPlaying = false;
+        this._beatIdx = 0;
+
         // Vertical view
         this.viewOffsetY = 0;
 
@@ -985,6 +1033,7 @@
         this._initAudioDemo();
         this._renderLoopPanel();
         this._syncReadouts();
+        this._initSyncSliceUI();
         this._tick();
       }
 
@@ -1228,6 +1277,158 @@
           this.needsRedraw = true;
         });
         el.addEventListener('pointerup', ()=>{ drag = null; });
+      }
+
+      _initSyncSliceUI(){
+        if(!this.kbGrid) return;
+        this.kbGrid.innerHTML = '';
+        for(let k=36;k<84;k++){
+          const d = document.createElement('div');
+          d.className = 'kbKey';
+          d.dataset.key = String(k);
+          const pc = k % 12;
+          if([1,3,6,8,10].includes(pc)) d.classList.add('black');
+          this.kbGrid.appendChild(d);
+        }
+
+        this.zoneLengthEl.addEventListener('change', ()=>{
+          const n = Number(this.zoneLengthEl.value);
+          if(Number.isFinite(n) && n>0) this.zoneLengthBeats = n;
+          this.zoneLengthEl.value = String(this.zoneLengthBeats);
+        });
+        this.beatSpeedModeEl.addEventListener('change', ()=>{ this.beatSpeedMode = this.beatSpeedModeEl.value; });
+        const syncBtnRefresh = ()=>{
+          this.useBeatmachineBtn.setAttribute('aria-pressed', String(this.syncMode==='beatmachine'));
+          this.useTimemachineBtn.setAttribute('aria-pressed', String(this.syncMode==='timemachine'));
+        };
+        this.useBeatmachineBtn.addEventListener('click', ()=>{
+          this.syncMode = (this.syncMode==='beatmachine') ? 'none' : 'beatmachine';
+          syncBtnRefresh();
+        });
+        this.useTimemachineBtn.addEventListener('click', ()=>{
+          this.syncMode = (this.syncMode==='timemachine') ? 'none' : 'timemachine';
+          syncBtnRefresh();
+        });
+        this.autoFindEmptyKeysBtn.setAttribute('aria-pressed','false');
+        this.autoFindEmptyKeysBtn.addEventListener('click', ()=>{
+          this.syncAutoFindEmpty = !this.syncAutoFindEmpty;
+          this.autoFindEmptyKeysBtn.setAttribute('aria-pressed', String(this.syncAutoFindEmpty));
+        });
+        this.dragMidiHostBtn.addEventListener('click', ()=>this._toast('Host drag-and-drop is not available in browser mode.'));
+        this.autoMapSlicesBtn.addEventListener('click', ()=>this._autoMapSlices());
+      }
+
+      _sliceRegions(){
+        const pts = [this.zoneStart, ...(this.gridMarkers||[]).map(m=>this._markerTime(m)).filter(t=>t>this.zoneStart && t<this.zoneEnd).sort((a,b)=>a-b), this.zoneEnd];
+        const out = [];
+        for(let i=0;i<pts.length-1;i++) if(pts[i+1]-pts[i] > (1/this.sampleRate)) out.push({idx:i, s:pts[i], e:pts[i+1]});
+        return out;
+      }
+
+      _sliceAtTime(t){
+        const slices = this._sliceRegions();
+        for(const s of slices) if(t>=s.s && t<s.e) return s.idx;
+        return -1;
+      }
+
+      _selectSlicesByRange(tA, tB){
+        const lo=Math.min(tA,tB), hi=Math.max(tA,tB);
+        this.selectedSlices.clear();
+        this._sliceRegions().forEach(s=>{ if(s.s>=lo && s.e<=hi) this.selectedSlices.add(s.idx); });
+      }
+
+      _findEmptyStartKey(count, span=1){
+        const used = new Set();
+        this.mappedZones.forEach(z=>{ for(let k=z.key;k<z.key+z.span;k++) used.add(k); });
+        for(let k=24;k<=108-count*span;k++){
+          let ok=true;
+          for(let i=0;i<count*span;i++) if(used.has(k+i)){ ok=false; break; }
+          if(ok) return k;
+        }
+        return 24;
+      }
+
+      _mapSlicesToKey(startKey, sliceIdxs, span=1){
+        const slices = this._sliceRegions();
+        sliceIdxs.forEach((idx,i)=>{
+          const s = slices.find(x=>x.idx===idx);
+          if(!s) return;
+          this.mappedZones.push({ key:startKey + i*span, span, start:s.s, end:s.e, slice:idx });
+        });
+        this._renderKeyboardMappings();
+      }
+
+      _renderKeyboardMappings(){
+        this.kbGrid.querySelectorAll('.kbKey').forEach(k=>k.classList.remove('mapped'));
+        this.mappedZones.forEach(z=>{
+          for(let k=z.key;k<z.key+z.span;k++){
+            const el=this.kbGrid.querySelector(`.kbKey[data-key="${k}"]`);
+            if(el) el.classList.add('mapped');
+          }
+        });
+      }
+
+      _autoMapSlices(){
+        const slices = this._sliceRegions();
+        const idxs = slices.map(s=>s.idx);
+        const start = this.syncAutoFindEmpty ? this._findEmptyStartKey(idxs.length,1) : 24;
+        this._mapSlicesToKey(start, idxs, 1);
+      }
+
+      _mapSelectedToKeyboardFromPoint(clientX, clientY){
+        const el = document.elementFromPoint(clientX, clientY)?.closest('.kbKey');
+        if(!el) return;
+        const startKey = Number(el.dataset.key);
+        const rect = this.syncKeyboard.getBoundingClientRect();
+        const span = this._clamp(1 + Math.floor(((rect.bottom - clientY) / Math.max(1, rect.height)) * 3), 1, 4);
+        const idxs = [...this.selectedSlices].sort((a,b)=>a-b);
+        const base = this.syncAutoFindEmpty ? this._findEmptyStartKey(idxs.length, span) : startKey;
+        this._mapSlicesToKey(base, idxs, span);
+      }
+
+      _syncTargetDuration(){
+        const tempo = this.gridBpm || 120;
+        const beats = Math.max(0.25, this.zoneLengthBeats || 4);
+        if(this.beatSpeedMode==='1/4') return beats * (60/tempo);
+        if(this.beatSpeedMode==='1/8') return beats * 0.5 * (60/tempo);
+        return beats * (60/tempo);
+      }
+
+      _playTimemachine(){
+        if(!this.buffer) return;
+        const start = this.zoneStart, end = this.zoneEnd;
+        const src = this.audioCtx.createBufferSource();
+        src.buffer = this.buffer;
+        const zoneDur = Math.max(0.001, end-start);
+        const target = Math.max(0.001, this._syncTargetDuration());
+        src.playbackRate.value = zoneDur / target;
+        src.connect(this.masterGain);
+        src.start(0, start, zoneDur);
+        this.source = src;
+      }
+
+      _playBeatmachine(){
+        const slices = this._sliceRegions();
+        if(!slices.length) return;
+        this._beatPlaying = true;
+        this._beatIdx = 0;
+        const tick = ()=>{
+          if(!this._beatPlaying) return;
+          const dynamicSlices = this._sliceRegions();
+          if(!dynamicSlices.length) return;
+          const s = dynamicSlices[this._beatIdx % dynamicSlices.length];
+          const src = this.audioCtx.createBufferSource();
+          src.buffer = this.buffer;
+          src.connect(this.masterGain);
+          const sliceDur = Math.max(0.001, s.e - s.s);
+          const targetPerSlice = Math.max(0.001, this._syncTargetDuration() / dynamicSlices.length);
+          src.playbackRate.value = sliceDur / targetPerSlice;
+          src.start(0, s.s, sliceDur);
+          this.source = src;
+          this._beatIdx++;
+          this._beatTimer = setTimeout(tick, targetPerSlice * 1000);
+        };
+        tick();
       }
 
       _initCanvas(){
@@ -1498,6 +1699,15 @@
         // Stop any existing playback
         this.stop();
 
+        if(this.syncMode === 'beatmachine'){
+          this._playBeatmachine();
+          return;
+        }
+        if(this.syncMode === 'timemachine'){
+          this._playTimemachine();
+          return;
+        }
+
         const loopOn = this._isPressed(this.loopToggle);
         const L = this._activeLoop();
         const oneShotFirst = this.loopSlots[0]?.active && this.loopSlots[0]?.mode === 'oneShot';
@@ -1545,6 +1755,8 @@
       }
 
       stop(){
+        this._beatPlaying = false;
+        if(this._beatTimer){ clearTimeout(this._beatTimer); this._beatTimer = null; }
         if(this.source){
           try{ this.source.stop(); }catch(e){}
           this.source = null;
@@ -1672,6 +1884,7 @@
       /* ============================= POINTER / MARKERS ============================= */
 
       _isLoopTabActive(){ return this.currentTab === "loop"; }
+      _isSyncTabActive(){ return this.currentTab === "sync"; }
 
       _onPointerDown(e){
         const magnifyActive = this.magnify || e.altKey;
@@ -1684,6 +1897,26 @@
 
         if(magnifyActive){
           this.drag = { type:'frame', x0:x, y0:y, x1:x, y1:y, wasClick:true };
+          this.needsRedraw = true;
+          return;
+        }
+
+        if(this._isSyncTabActive() && y > 24 && e.button===0){
+          const t = this._xToTime(x);
+          const idx = this._sliceAtTime(t);
+          if(idx >= 0){
+            if(e.shiftKey){
+              if(this.selectedSlices.has(idx)) this.selectedSlices.delete(idx); else this.selectedSlices.add(idx);
+            }else{
+              this.selectedSlices.clear();
+              this.selectedSlices.add(idx);
+            }
+            this.drag = { type:'sliceMapDrag', x0:x, y0:y };
+            this.needsRedraw = true;
+            return;
+          }
+          this.drag = { type:'sliceSelectRect', x0:x, x1:x };
+          this.selectedSlices.clear();
           this.needsRedraw = true;
           return;
         }
@@ -1751,6 +1984,12 @@
         if(this.drag.type === 'frame'){
           this.drag.x1 = x;
           this.drag.wasClick = this.drag.wasClick && (Math.abs(this.drag.x1 - this.drag.x0) < 3);
+          this.needsRedraw = true;
+          return;
+        }
+        if(this.drag.type === 'sliceSelectRect'){
+          this.drag.x1 = x;
+          this._selectSlicesByRange(this._xToTime(this.drag.x0), this._xToTime(this.drag.x1));
           this.needsRedraw = true;
           return;
         }
@@ -1888,6 +2127,13 @@
               L.active = true;
               this._renderLoopPanel();
             }
+          }
+        }
+
+        if(this.drag && this.drag.type === 'sliceMapDrag'){
+          const moved = Math.abs((this.drag.x0||0) - (this._localXY(e).x||0)) > 6 || Math.abs((this.drag.y0||0) - (this._localXY(e).y||0)) > 6;
+          if(moved && this.selectedSlices.size){
+            this._mapSelectedToKeyboardFromPoint(e.clientX, e.clientY);
           }
         }
 
@@ -2461,6 +2707,13 @@
           ctx.lineWidth = 1;
           ctx.strokeRect(xA+0.5, waveY+0.5, (xB-xA)-1, waveH-1);
         }
+        if(this.drag && this.drag.type==='sliceSelectRect'){
+          const xA = Math.min(this.drag.x0,this.drag.x1), xB = Math.max(this.drag.x0,this.drag.x1);
+          ctx.fillStyle = 'rgba(57,217,138,.10)';
+          ctx.fillRect(xA, waveY, xB-xA, waveH);
+          ctx.strokeStyle = 'rgba(57,217,138,.85)';
+          ctx.strokeRect(xA+0.5, waveY+0.5, (xB-xA)-1, waveH-1);
+        }
 
         ctx.restore();
       }
@@ -2584,6 +2837,16 @@
           ctx.fillRect(seam, y, seam, h);
           ctx.fillStyle = 'rgba(0,0,0,.20)';
           ctx.fillRect(seam+20, y, seam-20, h);
+        }
+
+        if(this._isSyncTabActive() && this.selectedSlices.size){
+          const slices = this._sliceRegions();
+          ctx.fillStyle = 'rgba(57,217,138,.25)';
+          for(const sl of slices){
+            if(!this.selectedSlices.has(sl.idx)) continue;
+            const x0 = this._timeToX(sl.s), x1 = this._timeToX(sl.e);
+            ctx.fillRect(Math.min(x0,x1), y, Math.abs(x1-x0), h);
+          }
         }
       }
 
