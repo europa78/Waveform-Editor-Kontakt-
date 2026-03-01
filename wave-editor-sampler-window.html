@@ -517,6 +517,11 @@
     .kbKey.black{ background:rgba(8,12,17,.85); height:20px; margin-top:0; }
     .kbKey.mapped{ box-shadow: inset 0 0 0 2px rgba(242,193,78,.85); background: rgba(242,193,78,.35); }
 
+    .envWrap{ display:grid; gap:8px; }
+    .envRow{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .envRow .miniToggle, .envRow .btn{ height:26px; }
+    .envAssign{ border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:8px; background:rgba(0,0,0,.16); }
+
     /* ---------- Toast ---------- */
     .toast{
       position:fixed;
@@ -750,6 +755,32 @@
             </div>
           </div>
 
+          <div class="panel" id="panelEnv" style="display:none;">
+            <div class="envWrap">
+              <div class="envRow">
+                <span style="font-size:12px;color:var(--muted2);">Visible Env</span>
+                <select class="select" id="envVisible"></select>
+                <button class="btn" id="envDelete">Delete</button>
+              </div>
+              <div class="envRow">
+                <button class="btn" id="envAssignVol">Volume</button>
+                <button class="btn" id="envAssignPan">Pan</button>
+                <span class="pill" id="envPending">Add: none</span>
+                <button class="btn" id="envAssignAdd">Add</button>
+              </div>
+              <div class="envAssign" id="envAssignPanel">
+                <div class="envRow">
+                  <span style="font-size:12px;color:var(--muted2);">Depth</span>
+                  <input id="envDepth" type="range" min="-1" max="1" step="0.01" value="1" style="width:140px;" />
+                  <button class="miniToggle" id="envInvert" aria-pressed="false">Invert</button>
+                  <span style="font-size:12px;color:var(--muted2);">Lag</span>
+                  <input class="num" id="envLag" value="0" style="width:66px;" />
+                  <button class="btn" id="envQuickJump">Quick Jump</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="panel" id="panelOther" style="display:none;">
             <div style="color:var(--muted); font-size:13px; line-height:1.35;">
               This tab is a placeholder in this first build. Next iterations can add slicing/grid markers,
@@ -930,7 +961,20 @@
         this.tabEls = Array.from(document.querySelectorAll('.tab'));
         this.panelLoop = document.querySelector('#panelLoop');
         this.panelSync = document.querySelector('#panelSync');
+        this.panelEnv = document.querySelector('#panelEnv');
         this.panelOther = document.querySelector('#panelOther');
+
+        this.envVisibleEl = document.querySelector('#envVisible');
+        this.envDeleteBtn = document.querySelector('#envDelete');
+        this.envAssignVolBtn = document.querySelector('#envAssignVol');
+        this.envAssignPanBtn = document.querySelector('#envAssignPan');
+        this.envPendingEl = document.querySelector('#envPending');
+        this.envAssignAddBtn = document.querySelector('#envAssignAdd');
+        this.envDepthEl = document.querySelector('#envDepth');
+        this.envInvertBtn = document.querySelector('#envInvert');
+        this.envLagEl = document.querySelector('#envLag');
+        this.envQuickJumpBtn = document.querySelector('#envQuickJump');
+        this.envAssignPanel = document.querySelector('#envAssignPanel');
 
         this.zoneLengthEl = document.querySelector('#zoneLength');
         this.beatSpeedModeEl = document.querySelector('#beatSpeedMode');
@@ -1013,6 +1057,10 @@
         this._beatPlaying = false;
         this._beatIdx = 0;
 
+        // Zone Envelopes
+        this.zone = { envelopes: [], visibleEnvelopeId: null, pendingTarget: null };
+        this.selectedEnvPointIdx = -1;
+
         // Vertical view
         this.viewOffsetY = 0;
 
@@ -1034,6 +1082,7 @@
         this._renderLoopPanel();
         this._syncReadouts();
         this._initSyncSliceUI();
+        this._initZoneEnvelopesUI();
         this._tick();
       }
 
@@ -1210,9 +1259,23 @@
             this.currentTab = which;
             if(which==='loop'){
               this.panelLoop.style.display = '';
+              this.panelSync.style.display = 'none';
+              this.panelEnv.style.display = 'none';
+              this.panelOther.style.display = 'none';
+            }else if(which==='sync'){
+              this.panelLoop.style.display = 'none';
+              this.panelSync.style.display = '';
+              this.panelEnv.style.display = 'none';
+              this.panelOther.style.display = 'none';
+            }else if(which==='env'){
+              this.panelLoop.style.display = 'none';
+              this.panelSync.style.display = 'none';
+              this.panelEnv.style.display = '';
               this.panelOther.style.display = 'none';
             }else{
               this.panelLoop.style.display = 'none';
+              this.panelSync.style.display = 'none';
+              this.panelEnv.style.display = 'none';
               this.panelOther.style.display = '';
               this.panelOther.innerHTML = `<div style="color:var(--muted); font-size:13px; line-height:1.35;">
                 <b>${t.textContent}</b> is a scaffold in this first build. Add features here in the next iteration.
@@ -1248,6 +1311,14 @@
           if(e.code === 'Space'){
             e.preventDefault();
             this.play();
+          }
+          if((e.key === 'Delete' || e.key === 'Backspace') && this.currentTab==='env'){
+            const env = this._visibleEnvelope();
+            if(env && this.selectedEnvPointIdx > 0 && this.selectedEnvPointIdx < env.points.length-1){
+              env.points.splice(this.selectedEnvPointIdx,1);
+              this.selectedEnvPointIdx = -1;
+              this.needsRedraw = true;
+            }
           }
           if(e.code === 'Escape'){
             this.stop();
@@ -1402,7 +1473,7 @@
         const zoneDur = Math.max(0.001, end-start);
         const target = Math.max(0.001, this._syncTargetDuration());
         src.playbackRate.value = zoneDur / target;
-        src.connect(this.masterGain);
+        this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, start, zoneDur, src.playbackRate.value);
         src.start(0, start, zoneDur);
         this.source = src;
       }
@@ -1419,16 +1490,182 @@
           const s = dynamicSlices[this._beatIdx % dynamicSlices.length];
           const src = this.audioCtx.createBufferSource();
           src.buffer = this.buffer;
-          src.connect(this.masterGain);
           const sliceDur = Math.max(0.001, s.e - s.s);
           const targetPerSlice = Math.max(0.001, this._syncTargetDuration() / dynamicSlices.length);
           src.playbackRate.value = sliceDur / targetPerSlice;
+          this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, s.s, sliceDur, src.playbackRate.value);
           src.start(0, s.s, sliceDur);
           this.source = src;
           this._beatIdx++;
           this._beatTimer = setTimeout(tick, targetPerSlice * 1000);
         };
         tick();
+      }
+
+      _initZoneEnvelopesUI(){
+        const mkTarget = (id, name)=>({id, name});
+
+        this.envAssignVolBtn.addEventListener('click', ()=>this._createOrSelectEnvelope('volume', 'Volume'));
+        this.envAssignPanBtn.addEventListener('click', ()=>this._createOrSelectEnvelope('pan', 'Pan'));
+        this.envAssignAddBtn.addEventListener('click', ()=>{
+          const t = this.zone.pendingTarget;
+          if(!t) return;
+          this._createOrSelectEnvelope(t.id, t.name);
+        });
+        this.envVisibleEl.addEventListener('change', ()=>{
+          this.zone.visibleEnvelopeId = this.envVisibleEl.value || null;
+          this.selectedEnvPointIdx = -1;
+          this._syncEnvAssignControls();
+          this.needsRedraw = true;
+        });
+        this.envDeleteBtn.addEventListener('click', ()=>{
+          const env = this._visibleEnvelope();
+          if(!env) return;
+          this.zone.envelopes = this.zone.envelopes.filter(e=>e.id!==env.id);
+          this.zone.visibleEnvelopeId = this.zone.envelopes[0]?.id ?? null;
+          this.selectedEnvPointIdx = -1;
+          this._refreshEnvelopeDropdown();
+          this._syncEnvAssignControls();
+          this.needsRedraw = true;
+        });
+
+        this.envDepthEl.addEventListener('input', ()=>{ const e=this._visibleEnvelope(); if(!e) return; e.depth=Number(this.envDepthEl.value); this.needsRedraw=true; });
+        this.envInvertBtn.addEventListener('click', ()=>{ const e=this._visibleEnvelope(); if(!e) return; e.invert=!e.invert; this.envInvertBtn.setAttribute('aria-pressed',String(e.invert)); this.needsRedraw=true; });
+        this.envLagEl.addEventListener('change', ()=>{ const e=this._visibleEnvelope(); if(!e) return; const n=Number(this.envLagEl.value); if(Number.isFinite(n)) e.lag=Math.max(0,n); this._syncEnvAssignControls(); });
+        this.envQuickJumpBtn.addEventListener('click', ()=>{ this.envAssignPanel.scrollIntoView({behavior:'smooth', block:'nearest'}); this._toast('Focused envelope assignment controls.'); });
+
+        window.addEventListener('pointerdown', (e)=>{
+          if(this.currentTab!=='env') return;
+          const t = e.target.closest('.num, .select, .miniToggle, .btn');
+          if(!t) return;
+          if(t.closest('#panelEnv')) return;
+          const id = t.id || ('param-' + (t.textContent||'param').trim().toLowerCase().replace(/\s+/g,'-'));
+          const name = t.title || (t.textContent||id).trim();
+          this.zone.pendingTarget = mkTarget(id,name);
+          this.envPendingEl.textContent = `Add: ${name}`;
+        }, true);
+
+        this._refreshEnvelopeDropdown();
+        this._syncEnvAssignControls();
+      }
+
+      _createOrSelectEnvelope(targetParamId, targetName){
+        let env = this.zone.envelopes.find(e=>e.targetParamId===targetParamId);
+        if(!env){
+          env = {
+            id: 'env-' + Math.random().toString(36).slice(2,9),
+            targetParamId,
+            targetName,
+            points:[{t:0,v:0.5},{t:1,v:0.5}],
+            locked:false,
+            loopEnabled:false,
+            loopStartT:0,
+            loopEndT:1,
+            followPlaybackSpeed:true,
+            depth:1,
+            invert:false,
+            lag:0
+          };
+          this.zone.envelopes.push(env);
+        }
+        this.zone.visibleEnvelopeId = env.id;
+        this._refreshEnvelopeDropdown();
+        this._syncEnvAssignControls();
+        this.needsRedraw = true;
+      }
+
+      _visibleEnvelope(){
+        if(!this.zone.visibleEnvelopeId) return null;
+        return this.zone.envelopes.find(e=>e.id===this.zone.visibleEnvelopeId) || null;
+      }
+
+      _refreshEnvelopeDropdown(){
+        this.envVisibleEl.innerHTML = '';
+        this.zone.envelopes.forEach(e=>{
+          const o = document.createElement('option');
+          o.value = e.id;
+          o.textContent = e.targetName;
+          this.envVisibleEl.appendChild(o);
+        });
+        if(this.zone.visibleEnvelopeId){
+          this.envVisibleEl.value = this.zone.visibleEnvelopeId;
+        }
+      }
+
+      _syncEnvAssignControls(){
+        const env = this._visibleEnvelope();
+        const on = !!env;
+        [this.envDeleteBtn,this.envDepthEl,this.envInvertBtn,this.envLagEl,this.envQuickJumpBtn].forEach(el=>el.disabled=!on);
+        if(env){
+          this.envDepthEl.value = String(env.depth ?? 1);
+          this.envInvertBtn.setAttribute('aria-pressed', String(!!env.invert));
+          this.envLagEl.value = String(env.lag ?? 0);
+        }
+        this.envPendingEl.textContent = `Add: ${this.zone.pendingTarget?.name || 'none'}`;
+      }
+
+      _envSnapTime(t){
+        return this._clamp(this._snapToGridMarkerIfNeeded(t), this.zoneStart, this.zoneEnd);
+      }
+
+      _envValueToY(v, y, h){ return y + (1-v) * h; }
+      _yToEnvValue(py, y, h){ return this._clamp(1 - ((py-y)/h), 0, 1); }
+
+      _applyEnvelopesForSource(src, chainIn, when, startOffset, playDur, playbackRate=1){
+        const envs = this.zone.envelopes;
+        if(!envs.length){ chainIn.connect(this.masterGain); return chainIn; }
+
+        const gainNode = this.audioCtx.createGain();
+        gainNode.gain.value = 1;
+        const panNode = this.audioCtx.createStereoPanner ? this.audioCtx.createStereoPanner() : null;
+        if(panNode) panNode.pan.value = 0;
+
+        chainIn.connect(gainNode);
+        if(panNode){ gainNode.connect(panNode); panNode.connect(this.masterGain); }
+        else gainNode.connect(this.masterGain);
+
+        const zoneDur = Math.max(0.001, this.zoneEnd - this.zoneStart);
+        for(const env of envs){
+          if(!env.points?.length) continue;
+          const pts = [...env.points].sort((a,b)=>a.t-b.t);
+          const curveLen = 128;
+          const curve = new Float32Array(curveLen);
+          for(let i=0;i<curveLen;i++){
+            const x = i/(curveLen-1);
+            let a = pts[0], b = pts[pts.length-1];
+            for(let j=0;j<pts.length-1;j++) if(x>=pts[j].t && x<=pts[j+1].t){ a=pts[j]; b=pts[j+1]; break; }
+            const u = (b.t===a.t)?0:(x-a.t)/(b.t-a.t);
+            let val = a.v + (b.v-a.v)*u;
+            if(env.invert) val = 1-val;
+            curve[i] = this._clamp(val,0,1);
+          }
+
+          const relStart = this._clamp((startOffset - this.zoneStart)/zoneDur,0,1);
+          const relEnd = this._clamp((startOffset + playDur - this.zoneStart)/zoneDur,relStart,1);
+          const segLen = Math.max(4, Math.floor(curveLen * Math.max(0.01, relEnd-relStart)));
+          const seg = new Float32Array(segLen);
+          for(let i=0;i<segLen;i++) seg[i] = curve[Math.floor(relStart*(curveLen-1) + i*(relEnd-relStart)*(curveLen-1)/Math.max(1,segLen-1))];
+          const lagN = Math.floor((env.lag ?? 0) * 8);
+          if(lagN > 0){
+            for(let i=1;i<segLen;i++){
+              seg[i] = (seg[i] + seg[Math.max(0,i-lagN)]) * 0.5;
+            }
+          }
+
+          const scaledDur = env.followPlaybackSpeed ? (playDur / Math.max(0.001, playbackRate)) : playDur;
+          if(env.targetParamId==='volume'){
+            const depth = env.depth ?? 1;
+            const mapped = new Float32Array(segLen);
+            for(let i=0;i<segLen;i++) mapped[i] = this._clamp(1 + depth * (seg[i]-0.5)*2, 0, 2);
+            gainNode.gain.setValueCurveAtTime(mapped, when, Math.max(0.001, scaledDur));
+          }else if(env.targetParamId==='pan' && panNode){
+            const depth = env.depth ?? 1;
+            const mapped = new Float32Array(segLen);
+            for(let i=0;i<segLen;i++) mapped[i] = this._clamp(depth * ((seg[i]-0.5)*2), -1, 1);
+            panNode.pan.setValueCurveAtTime(mapped, when, Math.max(0.001, scaledDur));
+          }
+        }
+        return panNode || gainNode;
       }
 
       _initCanvas(){
@@ -1451,6 +1688,7 @@
         window.addEventListener('pointerup', (e)=>this._onPointerUp(e));
         this.wavePane.addEventListener('wheel', (e)=>this._onWheel(e), {passive:false});
         this.wavePane.addEventListener('contextmenu', (e)=>e.preventDefault());
+        this.wavePane.addEventListener('dblclick', (e)=>this._onWaveDoubleClick(e));
       }
 
       _initAudioDemo(){
@@ -1734,7 +1972,7 @@
           src.loop = false;
         }
 
-        src.connect(this.masterGain);
+        this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, start, end-start, 1);
 
         // Start from region offset (note: duration arg is optional; for one-shot we pass it)
         try{
@@ -1885,6 +2123,21 @@
 
       _isLoopTabActive(){ return this.currentTab === "loop"; }
       _isSyncTabActive(){ return this.currentTab === "sync"; }
+      _isEnvTabActive(){ return this.currentTab === "env"; }
+
+      _onWaveDoubleClick(e){
+        if(!this._isEnvTabActive()) return;
+        const env = this._visibleEnvelope();
+        if(!env) return;
+        const {x, y} = this._localXY(e);
+        if(y < 26) return;
+        const t = this._clamp((this._xToTime(x)-this.zoneStart)/Math.max(0.0001,this.zoneEnd-this.zoneStart),0,1);
+        const v = this._yToEnvValue(y, 26, this.wavePane.clientHeight-28);
+        env.points.push({t,v});
+        env.points.sort((a,b)=>a.t-b.t);
+        this.selectedEnvPointIdx = env.points.findIndex(p=>p.t===t && p.v===v);
+        this.needsRedraw = true;
+      }
 
       _onPointerDown(e){
         const magnifyActive = this.magnify || e.altKey;
@@ -1899,6 +2152,28 @@
           this.drag = { type:'frame', x0:x, y0:y, x1:x, y1:y, wasClick:true };
           this.needsRedraw = true;
           return;
+        }
+
+        if(this._isEnvTabActive()){
+          const env = this._visibleEnvelope();
+          if(env){
+            const waveY = 26, waveH = this.wavePane.clientHeight-28;
+            let hitIdx = -1;
+            for(let i=0;i<env.points.length;i++){
+              const pt = env.points[i];
+              const px = this._timeToX(this.zoneStart + pt.t*(this.zoneEnd-this.zoneStart));
+              const py = this._envValueToY(pt.v, waveY, waveH);
+              if(Math.abs(px-x)<7 && Math.abs(py-y)<7){ hitIdx=i; break; }
+            }
+            if(hitIdx>=0){
+              this.selectedEnvPointIdx = hitIdx;
+              this.drag = { type:'envPoint', idx:hitIdx };
+              this.needsRedraw = true;
+              return;
+            }
+            this.selectedEnvPointIdx = -1;
+            this.needsRedraw = true;
+          }
         }
 
         if(this._isSyncTabActive() && y > 24 && e.button===0){
@@ -1995,6 +2270,18 @@
         }
 
         const t = this._xToTime(x);
+        if(this.drag.type === 'envPoint'){
+          const env = this._visibleEnvelope();
+          if(env && env.points[this.drag.idx]){
+            const pt = env.points[this.drag.idx];
+            const nt = this._envSnapTime(t);
+            const normT = this._clamp((nt-this.zoneStart)/Math.max(0.0001,this.zoneEnd-this.zoneStart),0,1);
+            pt.t = normT;
+            pt.v = this._yToEnvValue(this._localXY(e).y, 26, this.wavePane.clientHeight-28);
+            env.points.sort((a,b)=>a.t-b.t);
+            this.selectedEnvPointIdx = env.points.indexOf(pt);
+          }
+        }
         if(this.drag.type === 'zoneStart'){
           this.zoneStart = this._snapSampleMarkerIfNeeded(t);
           this.zoneStart = this._clamp(this.zoneStart, 0, this.zoneEnd - 1/this.sampleRate);
@@ -2565,7 +2852,7 @@
         const end = this._clamp(next, start + 1/this.sampleRate, this.zoneEnd);
         const src = this.audioCtx.createBufferSource();
         src.buffer = this.buffer;
-        src.connect(this.masterGain);
+        this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, start, end-start, 1);
         try{ src.start(0, start, end-start); }catch(e){ console.warn(e); }
         src.onended = ()=>{ if(this.source === src) this.source = null; };
         this.source = src;
@@ -2693,6 +2980,9 @@
 
         // Waveform itself
         this._drawWave(ctx, W, waveY, waveH);
+
+        // Zone envelope overlay
+        this._drawEnvelopeOverlay(ctx, W, waveY, waveH);
 
         // Markers on top
         this._drawMarkers(ctx, W, waveY, waveH);
@@ -2891,6 +3181,30 @@
           ctx.lineTo(px+0.5, y2);
         }
         ctx.stroke();
+      }
+
+      _drawEnvelopeOverlay(ctx, W, y, h){
+        if(!this._isEnvTabActive()) return;
+        const env = this._visibleEnvelope();
+        if(!env || !env.points?.length) return;
+        const pts = [...env.points].sort((a,b)=>a.t-b.t);
+
+        ctx.strokeStyle = 'rgba(255,153,58,.95)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for(let i=0;i<pts.length;i++){
+          const px = this._timeToX(this.zoneStart + pts[i].t*(this.zoneEnd-this.zoneStart));
+          const py = this._envValueToY(pts[i].v, y, h);
+          if(i===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+
+        for(let i=0;i<pts.length;i++){
+          const px = this._timeToX(this.zoneStart + pts[i].t*(this.zoneEnd-this.zoneStart));
+          const py = this._envValueToY(pts[i].v, y, h);
+          ctx.fillStyle = (i===this.selectedEnvPointIdx) ? 'rgba(255,210,120,1)' : 'rgba(255,153,58,.95)';
+          ctx.fillRect(px-3, py-3, 6, 6);
+        }
       }
 
       _drawMarkers(ctx, W, y, h){
