@@ -3248,7 +3248,8 @@ ${source}
         const lE = L ? this._timeToX(L.end) : -9999;
         const near = (a,b,r=6)=>Math.abs(a-b) < r;
 
-        if(this.gridPower){
+        // Keep grid marker dragging focused to Sync/Slice interactions so it doesn't steal loop/zone grabs.
+        if(this.gridPower && this._isSyncTabActive()){
           for(let i=0;i<this.gridMarkers.length;i++){
             const gx = this._timeToX(this._markerTime(this.gridMarkers[i]));
             if(near(x,gx,7) && y <= 44) return `gridHandle:${i}`;
@@ -3256,10 +3257,10 @@ ${source}
           }
         }
 
-        if(L && L.active && near(x, lS)) return 'loopStart';
-        if(L && L.active && near(x, lE)) return 'loopEnd';
-        if(near(x, zS, 9) && y > this.wavePane.clientHeight - 34) return 'zoneStart';
-        if(near(x, zE, 7)) return 'zoneEnd';
+        if(L && L.active && near(x, lS) && y > 24) return 'loopStart';
+        if(L && L.active && near(x, lE) && y > 24) return 'loopEnd';
+        if(near(x, zS, 9) && y > 24) return 'zoneStart';
+        if(near(x, zE, 7) && y > 24) return 'zoneEnd';
         return null;
       }
 
