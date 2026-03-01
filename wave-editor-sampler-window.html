@@ -521,6 +521,8 @@
     .envRow{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .envRow .miniToggle, .envRow .btn{ height:26px; }
     .envAssign{ border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:8px; background:rgba(0,0,0,.16); }
+    .sampleEditWrap{ display:grid; grid-template-columns: 1fr 220px; gap:10px; }
+    .sampleEditCols{ display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
 
     /* ---------- Toast ---------- */
     .toast{
@@ -781,11 +783,44 @@
             </div>
           </div>
 
-          <div class="panel" id="panelOther" style="display:none;">
-            <div style="color:var(--muted); font-size:13px; line-height:1.35;">
-              This tab is a placeholder in this first build. Next iterations can add slicing/grid markers,
-              envelope editors, and destructive sample edits.
+          <div class="panel" id="panelEdit" style="display:none;">
+            <div class="sampleEditWrap">
+              <div>
+                <div class="sampleEditCols">
+                  <div class="field">
+                    <div class="lbl">Edit</div>
+                    <div class="row">
+                      <button class="btn" id="seCut">Cut</button><button class="btn" id="seCopy">Copy</button><button class="btn" id="sePaste">Paste</button>
+                      <button class="btn" id="seCrop">Crop</button><button class="btn" id="seDelete">Delete</button><button class="btn" id="seDuplicate">Duplicate</button>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <div class="lbl">Transform</div>
+                    <div class="row">
+                      <button class="btn" id="seFadeIn">Fade In</button><button class="btn" id="seFadeOut">Fade Out</button><button class="btn" id="seSilence">Silence</button>
+                      <button class="btn" id="seReverse">Reverse</button><button class="btn" id="seNormalize">Normalize</button><button class="btn" id="seDcRem">DC Rem.</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="field" style="margin-top:8px;">
+                  <div class="lbl">Selection</div>
+                  <div class="row">
+                    <span style="font-size:12px;color:var(--muted2);">Start</span><input class="num" id="seSelStart" value="0" style="width:90px;" />
+                    <span style="font-size:12px;color:var(--muted2);">End</span><input class="num" id="seSelEnd" value="0" style="width:90px;" />
+                    <span style="font-size:12px;color:var(--muted2);">Length</span><input class="num" id="seSelLen" value="0" style="width:90px;" />
+                    <button class="miniToggle" id="seAutoPrelisten" aria-pressed="false">Auto Pre-Listen</button>
+                  </div>
+                </div>
+              </div>
+              <div class="field">
+                <div class="lbl">History</div>
+                <div class="row"><button class="btn" id="seUndo">Undo</button><button class="btn" id="seRedo">Redo</button><button class="btn" id="seRestore">Restore Orig</button></div>
+              </div>
             </div>
+          </div>
+
+          <div class="panel" id="panelOther" style="display:none;">
+            <div style="color:var(--muted); font-size:13px; line-height:1.35;">Sample Editor placeholder.</div>
           </div>
         </div>
 
@@ -962,7 +997,28 @@
         this.panelLoop = document.querySelector('#panelLoop');
         this.panelSync = document.querySelector('#panelSync');
         this.panelEnv = document.querySelector('#panelEnv');
+        this.panelEdit = document.querySelector('#panelEdit');
         this.panelOther = document.querySelector('#panelOther');
+
+        this.seCutBtn = document.querySelector('#seCut');
+        this.seCopyBtn = document.querySelector('#seCopy');
+        this.sePasteBtn = document.querySelector('#sePaste');
+        this.seCropBtn = document.querySelector('#seCrop');
+        this.seDeleteBtn = document.querySelector('#seDelete');
+        this.seDuplicateBtn = document.querySelector('#seDuplicate');
+        this.seFadeInBtn = document.querySelector('#seFadeIn');
+        this.seFadeOutBtn = document.querySelector('#seFadeOut');
+        this.seSilenceBtn = document.querySelector('#seSilence');
+        this.seReverseBtn = document.querySelector('#seReverse');
+        this.seNormalizeBtn = document.querySelector('#seNormalize');
+        this.seDcRemBtn = document.querySelector('#seDcRem');
+        this.seSelStartEl = document.querySelector('#seSelStart');
+        this.seSelEndEl = document.querySelector('#seSelEnd');
+        this.seSelLenEl = document.querySelector('#seSelLen');
+        this.seAutoPrelistenBtn = document.querySelector('#seAutoPrelisten');
+        this.seUndoBtn = document.querySelector('#seUndo');
+        this.seRedoBtn = document.querySelector('#seRedo');
+        this.seRestoreBtn = document.querySelector('#seRestore');
 
         this.envVisibleEl = document.querySelector('#envVisible');
         this.envDeleteBtn = document.querySelector('#envDelete');
@@ -1061,6 +1117,14 @@
         this.zone = { envelopes: [], visibleEnvelopeId: null, pendingTarget: null };
         this.selectedEnvPointIdx = -1;
 
+        // Sample Editor
+        this.editCursorT = 0;
+        this.editSel = null; // {s,e}
+        this.editClipboard = null; // {channels:Float32Array[], sampleRate}
+        this.editUndo = [];
+        this.editRedo = [];
+        this.originalWorking = null;
+
         // Vertical view
         this.viewOffsetY = 0;
 
@@ -1083,6 +1147,7 @@
         this._syncReadouts();
         this._initSyncSliceUI();
         this._initZoneEnvelopesUI();
+        this._initSampleEditorUI();
         this._tick();
       }
 
@@ -1250,7 +1315,7 @@
         this.nudgeLoopEndMinus.addEventListener('click', ()=>this._nudgeLoop('end', -1));
         this.nudgeLoopEndPlus.addEventListener('click', ()=>this._nudgeLoop('end', +1));
 
-        // Tabs switch (placeholder)
+        // Tabs switch
         this.tabEls.forEach(t=>{
           t.addEventListener('click', ()=>{
             this.tabEls.forEach(x=>x.classList.remove('active'));
@@ -1261,21 +1326,31 @@
               this.panelLoop.style.display = '';
               this.panelSync.style.display = 'none';
               this.panelEnv.style.display = 'none';
+              this.panelEdit.style.display = 'none';
               this.panelOther.style.display = 'none';
             }else if(which==='sync'){
               this.panelLoop.style.display = 'none';
               this.panelSync.style.display = '';
               this.panelEnv.style.display = 'none';
+              this.panelEdit.style.display = 'none';
               this.panelOther.style.display = 'none';
             }else if(which==='env'){
               this.panelLoop.style.display = 'none';
               this.panelSync.style.display = 'none';
               this.panelEnv.style.display = '';
+              this.panelEdit.style.display = 'none';
+              this.panelOther.style.display = 'none';
+            }else if(which==='edit'){
+              this.panelLoop.style.display = 'none';
+              this.panelSync.style.display = 'none';
+              this.panelEnv.style.display = 'none';
+              this.panelEdit.style.display = '';
               this.panelOther.style.display = 'none';
             }else{
               this.panelLoop.style.display = 'none';
               this.panelSync.style.display = 'none';
               this.panelEnv.style.display = 'none';
+              this.panelEdit.style.display = 'none';
               this.panelOther.style.display = '';
               this.panelOther.innerHTML = `<div style="color:var(--muted); font-size:13px; line-height:1.35;">
                 <b>${t.textContent}</b> is a scaffold in this first build. Add features here in the next iteration.
@@ -1667,6 +1742,196 @@
         }
         return panNode || gainNode;
       }
+
+      _initSampleEditorUI(){
+        const bindNum = (el, get, set, step)=>this._bindDragNumeric(el,{get,set,step});
+        const onNum = (el, fn)=>el.addEventListener('change', ()=>{ const n=Number(el.value); if(Number.isFinite(n)) fn(n); });
+
+        this.seCutBtn.addEventListener('click', ()=>this._seCut());
+        this.seCopyBtn.addEventListener('click', ()=>this._seCopy());
+        this.sePasteBtn.addEventListener('click', ()=>this._sePaste());
+        this.seCropBtn.addEventListener('click', ()=>this._seCrop());
+        this.seDeleteBtn.addEventListener('click', ()=>this._seDelete());
+        this.seDuplicateBtn.addEventListener('click', ()=>this._seDuplicate());
+        this.seFadeInBtn.addEventListener('click', ()=>this._seFadeIn());
+        this.seFadeOutBtn.addEventListener('click', ()=>this._seFadeOut());
+        this.seSilenceBtn.addEventListener('click', ()=>this._seSilence());
+        this.seReverseBtn.addEventListener('click', ()=>this._seReverse());
+        this.seNormalizeBtn.addEventListener('click', ()=>this._seNormalize());
+        this.seDcRemBtn.addEventListener('click', ()=>this._seDcRem());
+        this.seUndoBtn.addEventListener('click', ()=>this._seUndoOp());
+        this.seRedoBtn.addEventListener('click', ()=>this._seRedoOp());
+        this.seRestoreBtn.addEventListener('click', ()=>this._seRestoreOrig());
+        this.seAutoPrelistenBtn.addEventListener('click', ()=>this._togglePressed(this.seAutoPrelistenBtn));
+
+        onNum(this.seSelStartEl, (n)=>{ if(!this.buffer) return; const s=this._clamp(n/this.sampleRate, this.zoneStart, this.zoneEnd); const e=this.editSel?.e ?? s; this.editSel={s:Math.min(s,e), e:Math.max(s,e)}; this._syncSampleSelectionFields(); this.needsRedraw=true; });
+        onNum(this.seSelEndEl, (n)=>{ if(!this.buffer) return; const e=this._clamp(n/this.sampleRate, this.zoneStart, this.zoneEnd); const s=this.editSel?.s ?? e; this.editSel={s:Math.min(s,e), e:Math.max(s,e)}; this._syncSampleSelectionFields(); this.needsRedraw=true; });
+        onNum(this.seSelLenEl, (n)=>{ if(!this.buffer || !this.editSel) return; const len=Math.max(1,Math.floor(n))/this.sampleRate; this.editSel.e=this._clamp(this.editSel.s+len,this.editSel.s,this.zoneEnd); this._syncSampleSelectionFields(); this.needsRedraw=true; });
+
+        bindNum(this.seSelStartEl, ()=>Number(this.seSelStartEl.value||0), (v)=>{ const s=this._clamp(v/this.sampleRate,this.zoneStart,this.zoneEnd); const e=this.editSel?.e ?? s; this.editSel={s:Math.min(s,e), e:Math.max(s,e)}; this._syncSampleSelectionFields(); }, 20);
+        bindNum(this.seSelEndEl, ()=>Number(this.seSelEndEl.value||0), (v)=>{ const e=this._clamp(v/this.sampleRate,this.zoneStart,this.zoneEnd); const s=this.editSel?.s ?? e; this.editSel={s:Math.min(s,e), e:Math.max(s,e)}; this._syncSampleSelectionFields(); }, 20);
+        bindNum(this.seSelLenEl, ()=>Number(this.seSelLenEl.value||0), (v)=>{ if(!this.editSel) return; const len=Math.max(1,v)/this.sampleRate; this.editSel.e=this._clamp(this.editSel.s+len,this.editSel.s,this.zoneEnd); this._syncSampleSelectionFields(); }, 20);
+      }
+
+      _isEditTabActive(){ return this.currentTab === 'edit'; }
+
+      _ensureWorkingChannels(){
+        if(!this.buffer) return;
+        if(!this.workingChannels){
+          this.workingChannels = [];
+          for(let c=0;c<this.buffer.numberOfChannels;c++) this.workingChannels.push(new Float32Array(this.buffer.getChannelData(c)));
+          this.originalWorking = this.workingChannels.map(ch=>new Float32Array(ch));
+        }
+      }
+
+      _rebuildBufferFromWorking(){
+        if(!this.workingChannels?.length) return;
+        const chCount = this.workingChannels.length;
+        const len = this.workingChannels[0].length;
+        const b = this.audioCtx.createBuffer(chCount, len, this.sampleRate);
+        for(let c=0;c<chCount;c++) b.getChannelData(c).set(this.workingChannels[c]);
+        this.buffer = b;
+        const mono = new Float32Array(len);
+        for(let i=0;i<len;i++){
+          let acc = 0;
+          for(let c=0;c<chCount;c++) acc += this.workingChannels[c][i];
+          mono[i] = acc / chCount;
+        }
+        this.mono = mono;
+        this.zoneStart = 0;
+        this.zoneEnd = len / this.sampleRate;
+        this.viewEnd = Math.min(this.viewEnd, this.zoneEnd);
+        this._syncReadouts();
+      }
+
+      _seSnapshot(){
+        return {
+          channels: this.workingChannels.map(ch=>new Float32Array(ch)),
+          zoneEnd: this.zoneEnd,
+          loopSlots: this.loopSlots.map(l=>({...l})),
+          gridMarkers: (this.gridMarkers||[]).map(m=>typeof m==='number'?m:{...m}),
+          envelopes: this.zone.envelopes.map(e=>({...e, points:e.points.map(p=>({...p}))})),
+          sel: this.editSel ? {...this.editSel} : null,
+          cursor: this.editCursorT
+        };
+      }
+      _seRestoreSnapshot(snap){
+        this.workingChannels = snap.channels.map(ch=>new Float32Array(ch));
+        this.loopSlots = snap.loopSlots.map(l=>({...l}));
+        this.gridMarkers = snap.gridMarkers.map(m=>typeof m==='number'?m:{...m});
+        this.zone.envelopes = snap.envelopes.map(e=>({...e, points:e.points.map(p=>({...p}))}));
+        this.editSel = snap.sel ? {...snap.sel} : null;
+        this.editCursorT = snap.cursor;
+        this._rebuildBufferFromWorking();
+        this._renderLoopPanel();
+        this._refreshEnvelopeDropdown();
+        this._syncEnvAssignControls();
+        this._syncSampleSelectionFields();
+        this.needsRedraw = true;
+      }
+      _sePushUndo(){
+        this._ensureWorkingChannels();
+        this.editUndo.push(this._seSnapshot());
+        if(this.editUndo.length>60) this.editUndo.shift();
+        this.editRedo = [];
+      }
+
+      _sampleSelRange(){
+        if(!this.editSel) return null;
+        const s = this._clamp(this.editSel.s, this.zoneStart, this.zoneEnd);
+        const e = this._clamp(this.editSel.e, this.zoneStart, this.zoneEnd);
+        if(e <= s) return null;
+        return {s,e, i0:Math.floor(s*this.sampleRate), i1:Math.floor(e*this.sampleRate)};
+      }
+
+      _syncSampleSelectionFields(){
+        const r = this._sampleSelRange();
+        if(!r){
+          this.seSelStartEl.value = '0'; this.seSelEndEl.value = '0'; this.seSelLenEl.value='0';
+          return;
+        }
+        this.seSelStartEl.value = String(r.i0);
+        this.seSelEndEl.value = String(r.i1);
+        this.seSelLenEl.value = String(Math.max(0, r.i1-r.i0));
+        if(this._isPressed(this.seAutoPrelistenBtn)) this._playSelectionPrelisten();
+      }
+
+      async _playSelectionPrelisten(){
+        const r = this._sampleSelRange();
+        if(!r || !this.buffer) return;
+        await this._ensureAudio();
+        this.stop();
+        const src = this.audioCtx.createBufferSource();
+        src.buffer = this.buffer;
+        this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, r.s, r.e-r.s, 1);
+        src.start(0, r.s, Math.max(1/this.sampleRate, r.e-r.s));
+        this.source = src;
+      }
+
+      _seCopy(){
+        this._ensureWorkingChannels();
+        const r = this._sampleSelRange();
+        if(!r) return;
+        this.editClipboard = { sampleRate:this.sampleRate, channels:this.workingChannels.map(ch=>ch.slice(r.i0,r.i1)) };
+      }
+
+      _seApplyLengthChange(i0, i1, newLen){
+        const oldLen = Math.max(0,i1-i0);
+        const delta = (newLen - oldLen) / this.sampleRate;
+        const t0 = i0 / this.sampleRate;
+        const t1 = i1 / this.sampleRate;
+        for(const L of this.loopSlots){
+          if(L.start >= t1) L.start += delta; else if(L.start > t0) L.start = t0;
+          if(L.end >= t1) L.end += delta; else if(L.end > t0) L.end = Math.max(L.start + 1/this.sampleRate, t0);
+          L.start = this._clamp(L.start, this.zoneStart, this.zoneEnd + delta);
+          L.end = this._clamp(L.end, L.start + 1/this.sampleRate, this.zoneEnd + delta);
+        }
+        const upd = (t)=>{ if(t>=t1) return t+delta; if(t>t0) return t0; return t; };
+        this.gridMarkers = (this.gridMarkers||[]).map(m=>{
+          if(typeof m==='number') return upd(m);
+          return {...m, timeSec:upd(this._markerTime(m))};
+        }).filter(m=>this._markerTime(m)>=0);
+        for(const env of this.zone.envelopes){
+          const zDurOld = Math.max(0.0001, this.zoneEnd-this.zoneStart);
+          const zDurNew = Math.max(0.0001, zDurOld + delta);
+          env.points = env.points.map(p=>{
+            const abs = this.zoneStart + p.t * zDurOld;
+            const nabs = upd(abs);
+            return {t:this._clamp((nabs-this.zoneStart)/zDurNew,0,1), v:p.v};
+          }).filter((p,i,a)=> i===0 || p.t>a[i-1].t || i===a.length-1);
+        }
+      }
+
+      _seReplaceRange(i0,i1, insertChannels){
+        const out=[];
+        for(let c=0;c<this.workingChannels.length;c++){
+          const a=this.workingChannels[c];
+          const ins=(insertChannels && insertChannels[c]) ? insertChannels[c] : new Float32Array(0);
+          const n=new Float32Array(a.length - (i1-i0) + ins.length);
+          n.set(a.subarray(0,i0),0);
+          n.set(ins,i0);
+          n.set(a.subarray(i1), i0+ins.length);
+          out.push(n);
+        }
+        this.workingChannels=out;
+        this._seApplyLengthChange(i0,i1, insertChannels?insertChannels[0].length:0);
+        this._rebuildBufferFromWorking();
+      }
+
+      _seCut(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); this._seCopy(); this._seReplaceRange(r.i0,r.i1,null); this.editSel=null; this.editCursorT=r.s; this._syncSampleSelectionFields(); this.needsRedraw=true; }
+      _seDelete(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); this._seReplaceRange(r.i0,r.i1,null); this.editSel=null; this.editCursorT=r.s; this._syncSampleSelectionFields(); this.needsRedraw=true; }
+      _sePaste(){ this._ensureWorkingChannels(); if(!this.editClipboard) return; this._sePushUndo(); const r=this._sampleSelRange(); const i0=r?r.i0:Math.floor(this.editCursorT*this.sampleRate); const i1=r?r.i1:i0; this._seReplaceRange(i0,i1,this.editClipboard.channels.map(ch=>new Float32Array(ch))); this.editSel={s:i0/this.sampleRate,e:(i0+this.editClipboard.channels[0].length)/this.sampleRate}; this._syncSampleSelectionFields(); this.needsRedraw=true; }
+      _seCrop(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); this._seReplaceRange(r.i1, this.workingChannels[0].length, null); this._seReplaceRange(0, r.i0, null); this.editSel={s:0,e:(r.i1-r.i0)/this.sampleRate}; this.editCursorT=0; this._syncSampleSelectionFields(); this.needsRedraw=true; }
+      _seDuplicate(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); const clips=this.workingChannels.map(ch=>ch.slice(r.i0,r.i1)); this._seReplaceRange(r.i1,r.i1,clips); this.editSel={s:r.s,e:r.e+(r.e-r.s)}; this._syncSampleSelectionFields(); this.needsRedraw=true; }
+      _seFadeIn(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); for(const ch of this.workingChannels){ const L=Math.max(1,r.i1-r.i0); for(let i=0;i<L;i++) ch[r.i0+i]*=(i/(L-1)); } this._rebuildBufferFromWorking(); this.needsRedraw=true; }
+      _seFadeOut(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); for(const ch of this.workingChannels){ const L=Math.max(1,r.i1-r.i0); for(let i=0;i<L;i++) ch[r.i0+i]*=(1-(i/(L-1))); } this._rebuildBufferFromWorking(); this.needsRedraw=true; }
+      _seSilence(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); for(const ch of this.workingChannels) ch.fill(0,r.i0,r.i1); this._rebuildBufferFromWorking(); this.needsRedraw=true; }
+      _seReverse(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); for(const ch of this.workingChannels){ for(let i=0,j=r.i1-1;i<((r.i1-r.i0)>>1);i++,j--){ const a=r.i0+i,b=j; const t=ch[a]; ch[a]=ch[b]; ch[b]=t; } } this._rebuildBufferFromWorking(); this.needsRedraw=true; }
+      _seNormalize(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); let peak=0; for(const ch of this.workingChannels){ for(let i=r.i0;i<r.i1;i++) peak=Math.max(peak,Math.abs(ch[i])); } if(peak>1e-9){ const g=1/peak; for(const ch of this.workingChannels){ for(let i=r.i0;i<r.i1;i++) ch[i]*=g; } } this._rebuildBufferFromWorking(); this.needsRedraw=true; }
+      _seDcRem(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); for(const ch of this.workingChannels){ let m=0; for(let i=r.i0;i<r.i1;i++) m+=ch[i]; m/=Math.max(1,r.i1-r.i0); for(let i=r.i0;i<r.i1;i++) ch[i]-=m; } this._rebuildBufferFromWorking(); this.needsRedraw=true; }
+      _seUndoOp(){ if(!this.editUndo.length) return; this.editRedo.push(this._seSnapshot()); this._seRestoreSnapshot(this.editUndo.pop()); }
+      _seRedoOp(){ if(!this.editRedo.length) return; this.editUndo.push(this._seSnapshot()); this._seRestoreSnapshot(this.editRedo.pop()); }
+      _seRestoreOrig(){ if(!this.originalWorking) return; this._sePushUndo(); this.workingChannels=this.originalWorking.map(ch=>new Float32Array(ch)); this._rebuildBufferFromWorking(); this.editSel=null; this.editCursorT=0; this._syncSampleSelectionFields(); this.needsRedraw=true; }
 
       _initCanvas(){
         const resize = ()=>{
