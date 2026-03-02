@@ -812,6 +812,13 @@
                 <button class="btn" id="autoMapSlices">Auto-map slices</button>
                 <button class="btn" id="dragMidiHost">Drag MIDI to Host</button>
                 <button class="btn" id="autoFindEmptyKeys">Auto Find Empty Keys</button>
+                <button class="btn" id="loopSelectedSlice">Loop Selected Slice</button>
+                <button class="miniToggle" id="loopOnSliceSelect" aria-pressed="true">Loop on select</button>
+              </div>
+              <div class="syncRow">
+                <span style="font-size:12px;color:var(--muted2);">Hitpoint Threshold</span>
+                <input id="hitpointThreshold" type="range" min="0.02" max="0.95" step="0.01" value="0.35" style="width:170px;" />
+                <span class="pill" id="hitpointThresholdPill">0.35</span>
               </div>
               <div class="syncKeyboard" id="syncKeyboard"><div class="kbGrid" id="kbGrid"></div></div>
             </div>
@@ -1157,6 +1164,10 @@
         this.autoMapSlicesBtn = document.querySelector('#autoMapSlices');
         this.dragMidiHostBtn = document.querySelector('#dragMidiHost');
         this.autoFindEmptyKeysBtn = document.querySelector('#autoFindEmptyKeys');
+        this.loopSelectedSliceBtn = document.querySelector('#loopSelectedSlice');
+        this.loopOnSliceSelectBtn = document.querySelector('#loopOnSliceSelect');
+        this.hitpointThresholdEl = document.querySelector('#hitpointThreshold');
+        this.hitpointThresholdPill = document.querySelector('#hitpointThresholdPill');
         this.syncKeyboard = document.querySelector('#syncKeyboard');
         this.kbGrid = document.querySelector('#kbGrid');
 
@@ -1214,6 +1225,7 @@
         this.gridBpm = 126.32;
         this.gridSig = '4/4';
         this.gridThreshold = 0.35;
+        this.hitpointThreshold = 0.35;
         this.minSliceMs = 35;
         this.gridMarkers = [];
         this.gridOffset = 0;
@@ -1352,7 +1364,7 @@
         this.bpmHalfBtn.addEventListener('click', ()=>{ this.gridBpm = Math.max(20, this.gridBpm / 2); this._rebuildGridMarkers(); this._syncGridPanelUI(); });
         this.bpmDoubleBtn.addEventListener('click', ()=>{ this.gridBpm = Math.min(400, this.gridBpm * 2); this._rebuildGridMarkers(); this._syncGridPanelUI(); });
         this.sigSelect.addEventListener('change', ()=>{ this.gridSig = this.sigSelect.value; this._rebuildGridMarkers(); this._syncGridPanelUI(); });
-        this.gridThresholdEl.addEventListener('input', ()=>{ this.gridThreshold = Number(this.gridThresholdEl.value); if(this.gridMode==='auto'){ this._rebuildGridMarkers(); this.needsRedraw = true; } });
+        this.gridThresholdEl.addEventListener('input', ()=>{ this.gridThreshold = Number(this.gridThresholdEl.value); this.hitpointThreshold = this.gridThreshold; if(this.hitpointThresholdEl) this.hitpointThresholdEl.value = String(this.gridThreshold); if(this.hitpointThresholdPill) this.hitpointThresholdPill.textContent = this.gridThreshold.toFixed(2); if(this.gridMode==='auto'){ this._rebuildGridMarkers(); this.needsRedraw = true; } });
         this.minSliceMsEl.addEventListener('change', ()=>{
           const n = Number(this.minSliceMsEl.value);
           if(Number.isFinite(n)) this.minSliceMs = this._clamp(n, 0, 1000);
@@ -1594,6 +1606,21 @@
         });
         this.dragMidiHostBtn.addEventListener('click', ()=>this._toast('Host drag-and-drop is not available in browser mode.'));
         this.autoMapSlicesBtn.addEventListener('click', ()=>this._autoMapSlices());
+        this.loopSelectedSliceBtn.addEventListener('click', ()=>{
+          const idx = [...this.selectedSlices].sort((a,b)=>a-b)[0] ?? 0;
+          this._loopToSlice(idx, true);
+        });
+        this.loopOnSliceSelectBtn.addEventListener('click', ()=>this._togglePressed(this.loopOnSliceSelectBtn));
+        this.hitpointThresholdEl.addEventListener('input', ()=>{
+          const n = this._clamp(Number(this.hitpointThresholdEl.value), 0.02, 0.95);
+          this.hitpointThreshold = n;
+          this.gridThreshold = n;
+          this.gridThresholdEl.value = String(n);
+          this.hitpointThresholdPill.textContent = n.toFixed(2);
+          if(this.gridMode==='auto') this._rebuildGridMarkers();
+          this.needsRedraw = true;
+        });
+        this.hitpointThresholdPill.textContent = this.hitpointThreshold.toFixed(2);
       }
 
       _sliceRegions(){
@@ -1607,6 +1634,20 @@
         const slices = this._sliceRegions();
         for(const s of slices) if(t>=s.s && t<s.e) return s.idx;
         return -1;
+      }
+
+      _loopToSlice(idx, preview=false){
+        const slices = this._sliceRegions();
+        const s = slices.find(x=>x.idx===idx) || slices[0];
+        const L = this._activeLoop();
+        if(!s || !L) return;
+        L.start = this._clamp(s.s, this.zoneStart, this.zoneEnd - 1/this.sampleRate);
+        L.end = this._clamp(s.e, L.start + 1/this.sampleRate, this.zoneEnd);
+        L.active = true;
+        this._renderLoopPanel();
+        this._syncReadouts();
+        this.needsRedraw = true;
+        if(preview) this._prelistenLoop();
       }
 
       _selectSlicesByRange(tA, tB){
@@ -2989,6 +3030,7 @@ ${source}
               this.selectedSlices.add(idx);
             }
             this.drag = { type:'sliceMapDrag', x0:x, y0:y };
+            if(this._isPressed(this.loopOnSliceSelectBtn)) this._loopToSlice(idx, this._isPressed(this.autoPrelisten));
             this.needsRedraw = true;
             return;
           }
@@ -3572,15 +3614,22 @@ ${source}
       _buildTransientCandidates(){
         this.gridTransientCandidates = [];
         if(!this.mono || !this.buffer) return;
-        const win = Math.max(32, Math.floor(this.sampleRate * 0.01));
-        let prev = 0;
+
+        const win = Math.max(32, Math.floor(this.sampleRate * 0.008));
+        const windows = [];
         for(let i=win;i<this.mono.length-win;i+=win){
-          let e = 0;
-          for(let j=0;j<win;j++) e += Math.abs(this.mono[i+j]);
-          const env = e / win;
-          const diff = Math.max(0, env - prev);
-          if(diff > 0.0025) this.gridTransientCandidates.push({t:i/this.sampleRate, e:diff});
-          prev = env * 0.85 + prev * 0.15;
+          let peak = 0;
+          let peakIdx = i;
+          for(let j=0;j<win;j++){
+            const v = Math.abs(this.mono[i+j]);
+            if(v > peak){ peak = v; peakIdx = i+j; }
+          }
+          windows.push({t:peakIdx/this.sampleRate, e:peak});
+        }
+
+        for(let i=1;i<windows.length-1;i++){
+          const a = windows[i-1], b = windows[i], c = windows[i+1];
+          if(b.e >= a.e && b.e > c.e && b.e > 0.0005) this.gridTransientCandidates.push(b);
         }
       }
 
@@ -3648,6 +3697,7 @@ ${source}
 
       async _auditionGridSlice(idx){
         if(!this.buffer || !this.gridPower || this.gridMarkers[idx] == null) return;
+        if(this._isPressed(this.loopOnSliceSelectBtn)) this._loopToSlice(idx, false);
         await this._ensureAudio();
         this.stop();
         const start = this._clamp(this._markerTime(this.gridMarkers[idx]), this.zoneStart, this.zoneEnd);
