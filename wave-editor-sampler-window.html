@@ -866,8 +866,8 @@
                 <div class="syncRow">
                   <span style="font-size:12px;color:var(--muted2);">Performance Pads</span>
                   <button class="miniToggle" id="ppModeSampler" aria-pressed="true">Sampler</button>
-                  <button class="miniToggle" id="ppModeKeyboard" aria-pressed="false">Keyboard</button>
-                  <button class="miniToggle" id="ppModeBeatJump" aria-pressed="false">Beat Jump</button>
+                  <button class="miniToggle" id="ppModeKeyboard" aria-pressed="false">Key Shift</button>
+                  <button class="miniToggle" id="ppModeBeatJump" aria-pressed="false">Beat Loop</button>
                   <button class="miniToggle" id="ppModeEffects" aria-pressed="false">Effects</button>
                   <button class="miniToggle" id="ppShift" aria-pressed="false">SHIFT</button>
                   <button class="btn icon" id="ppParamMinus">◀</button>
@@ -894,6 +894,14 @@
                 </div>
                 <div class="perfPadsGrid" id="perfPadsGrid"></div>
                 <div class="small" id="perfPadsHint" style="color:var(--muted2);">Pads trigger slices from current hitpoints.</div>
+                <details class="small" style="color:var(--muted2); margin-top:4px;">
+                  <summary style="cursor:pointer;">Performance Pad manual notes</summary>
+                  <div style="margin-top:6px; line-height:1.35;">
+                    <b>Sampler mode:</b> Press a pad to play its assigned slice. Hold <b>SHIFT</b> and press pad to set hot cue.<br/>
+                    <b>Beat Loop mode:</b> Pad rows map to 1/64, 1/32, 1/16, 1/8, 1/4, 1/2, 1, 2 beats (or bar bank). Press same pad again to cancel loop.<br/>
+                    <b>Key Shift mode:</b> Pads play the hot-cue slice with per-pad semitone shifts. Use ◀/▶ to shift assignment bank.
+                  </div>
+                </details>
               </div>
             </div>
           </div>
@@ -1354,6 +1362,9 @@
         this.perfPadFxByPad = Array.from({length:128}, ()=> 'none');
         this.perfPadChain = { echo:true, flanger:false, phaser:false, reverb:false };
         this.fxReverbIR = null;
+        this.perfPadBeatLoopBank = 0; // 0=beats, 1=bars
+        this.perfPadBeatLoopActivePad = -1;
+        this.perfPadKeyShiftBase = -4;
 
         // Zone Envelopes
         this.zone = { envelopes: [], visibleEnvelopeId: null, pendingTarget: null };
@@ -1894,8 +1905,19 @@
         this.ppModeBeatJumpBtn.addEventListener('click', ()=>setMode('beatjump'));
         this.ppModeEffectsBtn.addEventListener('click', ()=>setMode('effects'));
         this.ppShiftBtn.addEventListener('click', ()=>{ this.perfPadShift = !this.perfPadShift; this._refreshPerformancePads(); });
-        this.ppParamMinusBtn.addEventListener('click', ()=>{ this.perfPadParamOffset = Math.max(0, this.perfPadParamOffset - 8); this._refreshPerformancePads(); });
-        this.ppParamPlusBtn.addEventListener('click', ()=>{ this.perfPadParamOffset += 8; this._refreshPerformancePads(); });
+
+        this.ppParamMinusBtn.addEventListener('click', ()=>{
+          if(this.perfPadMode==='beatjump') this.perfPadBeatLoopBank = Math.max(0, this.perfPadBeatLoopBank-1);
+          else if(this.perfPadMode==='keyboard') this.perfPadKeyShiftBase -= 8;
+          else this.perfPadParamOffset = Math.max(0, this.perfPadParamOffset - 8);
+          this._refreshPerformancePads();
+        });
+        this.ppParamPlusBtn.addEventListener('click', ()=>{
+          if(this.perfPadMode==='beatjump') this.perfPadBeatLoopBank = Math.min(1, this.perfPadBeatLoopBank+1);
+          else if(this.perfPadMode==='keyboard') this.perfPadKeyShiftBase += 8;
+          else this.perfPadParamOffset += 8;
+          this._refreshPerformancePads();
+        });
 
         this.ppFxSelectEl.addEventListener('change', ()=>{ this.perfPadFxSelected = this.ppFxSelectEl.value; });
         this.ppFxAssignBtn.addEventListener('click', ()=>{
@@ -1933,20 +1955,21 @@
         this.ppChainPhaserBtn.setAttribute('aria-pressed', String(!!this.perfPadChain.phaser));
         this.ppChainReverbBtn.setAttribute('aria-pressed', String(!!this.perfPadChain.reverb));
 
-        const labels = mode==='beatjump'
-          ? ['-8','-4','-2','-1','+1','+2','+4','+8']
-          : mode==='effects'
-          ? ['ECHO','BACK SPIN','FLANGER','REVERB','VINYL BRAKE','PHASER','FX G','FX H']
-          : Array.from({length:8}, (_,i)=>`Pad ${i+1}`);
+        const beatLabels = ['1/64','1/32','1/16','1/8','1/4','1/2','1','2'];
         Array.from(this.perfPadsGrid.children).forEach((el,i)=>{
           const target = this.perfPadParamOffset + i;
           const assigned = this.perfPadFxByPad[target] || 'none';
-          el.textContent = mode==='effects'
-            ? labels[i]
-            : `${labels[i]} · S${target+1}${assigned!=='none' ? ` [${assigned.toUpperCase()}]` : ''}`;
-          el.classList.toggle('hot', target===this.perfPadHotCue);
+          let text = `Pad ${i+1} · S${target+1}${assigned!=='none' ? ` [${assigned.toUpperCase()}]` : ''}`;
+          if(mode==='effects') text = ['ECHO','BACK SPIN','FLANGER','REVERB','VINYL BRAKE','PHASER','FX G','FX H'][i];
+          if(mode==='beatjump') text = this.perfPadBeatLoopBank===0 ? `${beatLabels[i]} beat${i<6?'':'s'}` : `${Math.max(1,2**(i-3))} bar${(i-3)<=0?'':'s'}`;
+          if(mode==='keyboard') text = `${(this.perfPadKeyShiftBase + i)>=0?'+':''}${this.perfPadKeyShiftBase + i} st`;
+          el.textContent = text;
+          el.classList.toggle('hot', target===this.perfPadHotCue || (mode==='beatjump' && i===this.perfPadBeatLoopActivePad));
         });
-        this.perfPadsHint.textContent = `Mode: ${mode}${this.perfPadShift ? ' (shift)' : ''} · offset ${this.perfPadParamOffset} · hot cue ${this.perfPadHotCue+1}`;
+
+        if(mode==='beatjump') this.perfPadsHint.textContent = `Beat Loop bank: ${this.perfPadBeatLoopBank===0 ? 'beats' : 'bars'} · press same pad to cancel.`;
+        else if(mode==='keyboard') this.perfPadsHint.textContent = `Key Shift base: ${this.perfPadKeyShiftBase>=0?'+':''}${this.perfPadKeyShiftBase} semitones.`;
+        else this.perfPadsHint.textContent = `Mode: ${mode}${this.perfPadShift ? ' (shift)' : ''} · offset ${this.perfPadParamOffset} · hot cue ${this.perfPadHotCue+1}`;
       }
 
       _selectedPadFxList(padIdx){
@@ -1972,7 +1995,6 @@
       _applyPadFxChain(inputNode, fxList, when, duration){
         if(!fxList?.length){ inputNode.connect(this.masterGain); return; }
         let current = inputNode;
-        const cleanup = [];
         for(const fx of fxList){
           if(fx==='echo'){
             const dry = this.audioCtx.createGain(); dry.gain.value = 0.78;
@@ -1992,7 +2014,6 @@
             const lfoG = this.audioCtx.createGain(); lfoG.gain.value = 0.003;
             lfo.connect(lfoG); lfoG.connect(d.delayTime);
             lfo.start(when); lfo.stop(when + duration + 0.2);
-            cleanup.push(lfo);
             current.connect(dry); dry.connect(out);
             current.connect(d); d.connect(wet); wet.connect(out);
             current = out;
@@ -2003,7 +2024,6 @@
             const g = this.audioCtx.createGain(); g.gain.value = 500;
             lfo.connect(g); g.connect(a1.frequency); g.connect(a2.frequency);
             lfo.start(when); lfo.stop(when + duration + 0.2);
-            cleanup.push(lfo);
             current.connect(a1); a1.connect(a2); current = a2;
           }else if(fx==='reverb'){
             const out = this.audioCtx.createGain();
@@ -2018,7 +2038,7 @@
         current.connect(this.masterGain);
       }
 
-      _playSliceWithPadFx(sliceIdx, padIdx){
+      _playSliceWithPadFx(sliceIdx, padIdx, semitoneShift=0){
         if(!this.buffer) return;
         const slices = this._sliceRegions();
         const s = slices.find(x=>x.idx===sliceIdx) || slices[0];
@@ -2030,7 +2050,8 @@
         this.stop();
         const src = this.audioCtx.createBufferSource();
         src.buffer = this.buffer;
-        this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, start, end-start, 1, null, fxList);
+        src.playbackRate.value = Math.pow(2, semitoneShift/12);
+        this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, start, end-start, src.playbackRate.value, null, fxList);
         try{ src.start(0, start, end-start); }catch(e){ console.warn(e); }
         src.onended = ()=>{ if(this.source === src) this.source = null; };
         this.source = src;
@@ -2057,26 +2078,37 @@
 
         if(this.perfPadMode==='sampler'){
           if(this.perfPadShift){ this.perfPadHotCue = clamped; this._refreshPerformancePads(); return; }
-          this._playSliceWithPadFx(clamped, clamped);
+          this._playSliceWithPadFx(clamped, clamped, 0);
           return;
         }
 
         if(this.perfPadMode==='keyboard'){
           const target = this.perfPadShift ? this.perfPadHotCue : clamped;
-          this._loopToSlice(target, true);
+          const semitone = this.perfPadKeyShiftBase + localIdx;
           this.perfPadHotCue = target;
+          this._playSliceWithPadFx(target, target, semitone);
           this._refreshPerformancePads();
           return;
         }
 
         if(this.perfPadMode==='beatjump'){
-          const jumps = [-8,-4,-2,-1,1,2,4,8];
-          const step = this._gridStepSeconds();
-          const delta = jumps[localIdx] * step;
-          this.viewStart = this._clamp(this.viewStart + delta, this.zoneStart, this.zoneEnd - (this.viewEnd-this.viewStart));
-          this.viewEnd = this.viewStart + (this.viewEnd-this.viewStart);
-          this._clampViewToZone();
-          this.needsRedraw = true;
+          const L = this._activeLoop();
+          if(!L) return;
+          const beatsTable = [1/64,1/32,1/16,1/8,1/4,1/2,1,2];
+          const barsTable = [1/8,1/4,1/2,1,2,4,8,16];
+          const beats = this.perfPadBeatLoopBank===0 ? beatsTable[localIdx] : barsTable[localIdx] * Number((this.gridSig || '4/4').split('/')[0] || 4);
+          const dur = beats * (60 / Math.max(20, this.gridBpm || 120));
+          if(this.perfPadBeatLoopActivePad===localIdx){
+            this.perfPadBeatLoopActivePad = -1;
+            this._toast('Beat Loop canceled.');
+            this._refreshPerformancePads();
+            return;
+          }
+          L.end = this._clamp(L.start + dur, L.start + 1/this.sampleRate, this.zoneEnd);
+          this.perfPadBeatLoopActivePad = localIdx;
+          this._renderLoopPanel();
+          this._prelistenLoop();
+          this._refreshPerformancePads();
           return;
         }
       }
