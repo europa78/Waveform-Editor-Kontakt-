@@ -873,6 +873,25 @@
                   <button class="btn icon" id="ppParamMinus">◀</button>
                   <button class="btn icon" id="ppParamPlus">▶</button>
                 </div>
+                <div class="syncRow">
+                  <span style="font-size:12px;color:var(--muted2);">Pad FX</span>
+                  <select class="select" id="ppFxSelect" style="height:26px;">
+                    <option value="none">None</option>
+                    <option value="echo">Echo</option>
+                    <option value="flanger">Flanger</option>
+                    <option value="phaser">Phaser</option>
+                    <option value="reverb">Reverb</option>
+                  </select>
+                  <button class="btn" id="ppFxAssign">Assign to Pad</button>
+                  <button class="btn" id="ppFxClear">Clear Pad FX</button>
+                </div>
+                <div class="syncRow">
+                  <span style="font-size:12px;color:var(--muted2);">FX Chain</span>
+                  <button class="miniToggle" id="ppChainEcho" aria-pressed="true">Echo</button>
+                  <button class="miniToggle" id="ppChainFlanger" aria-pressed="false">Flanger</button>
+                  <button class="miniToggle" id="ppChainPhaser" aria-pressed="false">Phaser</button>
+                  <button class="miniToggle" id="ppChainReverb" aria-pressed="false">Reverb</button>
+                </div>
                 <div class="perfPadsGrid" id="perfPadsGrid"></div>
                 <div class="small" id="perfPadsHint" style="color:var(--muted2);">Pads trigger slices from current hitpoints.</div>
               </div>
@@ -1243,6 +1262,13 @@
         this.ppShiftBtn = document.querySelector('#ppShift');
         this.ppParamMinusBtn = document.querySelector('#ppParamMinus');
         this.ppParamPlusBtn = document.querySelector('#ppParamPlus');
+        this.ppFxSelectEl = document.querySelector('#ppFxSelect');
+        this.ppFxAssignBtn = document.querySelector('#ppFxAssign');
+        this.ppFxClearBtn = document.querySelector('#ppFxClear');
+        this.ppChainEchoBtn = document.querySelector('#ppChainEcho');
+        this.ppChainFlangerBtn = document.querySelector('#ppChainFlanger');
+        this.ppChainPhaserBtn = document.querySelector('#ppChainPhaser');
+        this.ppChainReverbBtn = document.querySelector('#ppChainReverb');
 
         // Menus
         this.snapMenu = document.querySelector('#snapMenu');
@@ -1324,6 +1350,10 @@
         this.perfPadShift = false;
         this.perfPadParamOffset = 0;
         this.perfPadHotCue = 0;
+        this.perfPadFxSelected = 'echo';
+        this.perfPadFxByPad = Array.from({length:128}, ()=> 'none');
+        this.perfPadChain = { echo:true, flanger:false, phaser:false, reverb:false };
+        this.fxReverbIR = null;
 
         // Zone Envelopes
         this.zone = { envelopes: [], visibleEnvelopeId: null, pendingTarget: null };
@@ -1866,6 +1896,26 @@
         this.ppShiftBtn.addEventListener('click', ()=>{ this.perfPadShift = !this.perfPadShift; this._refreshPerformancePads(); });
         this.ppParamMinusBtn.addEventListener('click', ()=>{ this.perfPadParamOffset = Math.max(0, this.perfPadParamOffset - 8); this._refreshPerformancePads(); });
         this.ppParamPlusBtn.addEventListener('click', ()=>{ this.perfPadParamOffset += 8; this._refreshPerformancePads(); });
+
+        this.ppFxSelectEl.addEventListener('change', ()=>{ this.perfPadFxSelected = this.ppFxSelectEl.value; });
+        this.ppFxAssignBtn.addEventListener('click', ()=>{
+          const idx = this.perfPadHotCue;
+          this.perfPadFxByPad[idx] = this.perfPadFxSelected;
+          this._refreshPerformancePads();
+        });
+        this.ppFxClearBtn.addEventListener('click', ()=>{
+          const idx = this.perfPadHotCue;
+          this.perfPadFxByPad[idx] = 'none';
+          this._refreshPerformancePads();
+        });
+
+        const bindChain = (btn, key)=>btn.addEventListener('click', ()=>{ this.perfPadChain[key] = !this.perfPadChain[key]; this._refreshPerformancePads(); });
+        bindChain(this.ppChainEchoBtn, 'echo');
+        bindChain(this.ppChainFlangerBtn, 'flanger');
+        bindChain(this.ppChainPhaserBtn, 'phaser');
+        bindChain(this.ppChainReverbBtn, 'reverb');
+
+        this.ppFxSelectEl.value = this.perfPadFxSelected;
         this._refreshPerformancePads();
       }
 
@@ -1878,17 +1928,112 @@
         this.ppModeEffectsBtn.setAttribute('aria-pressed', String(mode==='effects'));
         this.ppShiftBtn.setAttribute('aria-pressed', String(this.perfPadShift));
 
+        this.ppChainEchoBtn.setAttribute('aria-pressed', String(!!this.perfPadChain.echo));
+        this.ppChainFlangerBtn.setAttribute('aria-pressed', String(!!this.perfPadChain.flanger));
+        this.ppChainPhaserBtn.setAttribute('aria-pressed', String(!!this.perfPadChain.phaser));
+        this.ppChainReverbBtn.setAttribute('aria-pressed', String(!!this.perfPadChain.reverb));
+
         const labels = mode==='beatjump'
           ? ['-8','-4','-2','-1','+1','+2','+4','+8']
           : mode==='effects'
-          ? ['FX A','FX B','FX C','FX D','FX E','FX F','FX G','FX H']
+          ? ['ECHO','BACK SPIN','FLANGER','REVERB','VINYL BRAKE','PHASER','FX G','FX H']
           : Array.from({length:8}, (_,i)=>`Pad ${i+1}`);
         Array.from(this.perfPadsGrid.children).forEach((el,i)=>{
           const target = this.perfPadParamOffset + i;
-          el.textContent = `${labels[i]} · S${target+1}`;
+          const assigned = this.perfPadFxByPad[target] || 'none';
+          el.textContent = mode==='effects'
+            ? labels[i]
+            : `${labels[i]} · S${target+1}${assigned!=='none' ? ` [${assigned.toUpperCase()}]` : ''}`;
           el.classList.toggle('hot', target===this.perfPadHotCue);
         });
-        this.perfPadsHint.textContent = `Mode: ${mode}${this.perfPadShift ? ' (shift)' : ''} · offset ${this.perfPadParamOffset}`;
+        this.perfPadsHint.textContent = `Mode: ${mode}${this.perfPadShift ? ' (shift)' : ''} · offset ${this.perfPadParamOffset} · hot cue ${this.perfPadHotCue+1}`;
+      }
+
+      _selectedPadFxList(padIdx){
+        const chain = [];
+        const assigned = this.perfPadFxByPad[padIdx] || 'none';
+        if(assigned !== 'none') chain.push(assigned);
+        for(const k of ['echo','flanger','phaser','reverb']) if(this.perfPadChain[k] && !chain.includes(k)) chain.push(k);
+        return chain;
+      }
+
+      _buildReverbIR(){
+        if(!this.audioCtx || this.fxReverbIR) return this.fxReverbIR;
+        const len = Math.floor(this.audioCtx.sampleRate * 1.2);
+        const ir = this.audioCtx.createBuffer(2, len, this.audioCtx.sampleRate);
+        for(let c=0;c<2;c++){
+          const d = ir.getChannelData(c);
+          for(let i=0;i<len;i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/len, 2.4);
+        }
+        this.fxReverbIR = ir;
+        return ir;
+      }
+
+      _applyPadFxChain(inputNode, fxList, when, duration){
+        if(!fxList?.length){ inputNode.connect(this.masterGain); return; }
+        let current = inputNode;
+        const cleanup = [];
+        for(const fx of fxList){
+          if(fx==='echo'){
+            const dry = this.audioCtx.createGain(); dry.gain.value = 0.78;
+            const wet = this.audioCtx.createGain(); wet.gain.value = 0.38;
+            const out = this.audioCtx.createGain();
+            const d = this.audioCtx.createDelay(0.8); d.delayTime.value = Math.min(0.45, Math.max(0.08, duration*0.35));
+            const fb = this.audioCtx.createGain(); fb.gain.value = 0.34;
+            current.connect(dry); dry.connect(out);
+            current.connect(d); d.connect(fb); fb.connect(d); d.connect(wet); wet.connect(out);
+            current = out;
+          }else if(fx==='flanger'){
+            const out = this.audioCtx.createGain();
+            const d = this.audioCtx.createDelay(0.03); d.delayTime.value = 0.005;
+            const wet = this.audioCtx.createGain(); wet.gain.value = 0.5;
+            const dry = this.audioCtx.createGain(); dry.gain.value = 0.75;
+            const lfo = this.audioCtx.createOscillator(); lfo.frequency.value = 0.23;
+            const lfoG = this.audioCtx.createGain(); lfoG.gain.value = 0.003;
+            lfo.connect(lfoG); lfoG.connect(d.delayTime);
+            lfo.start(when); lfo.stop(when + duration + 0.2);
+            cleanup.push(lfo);
+            current.connect(dry); dry.connect(out);
+            current.connect(d); d.connect(wet); wet.connect(out);
+            current = out;
+          }else if(fx==='phaser'){
+            const a1 = this.audioCtx.createBiquadFilter(); a1.type='allpass'; a1.frequency.value = 700;
+            const a2 = this.audioCtx.createBiquadFilter(); a2.type='allpass'; a2.frequency.value = 1500;
+            const lfo = this.audioCtx.createOscillator(); lfo.frequency.value = 0.17;
+            const g = this.audioCtx.createGain(); g.gain.value = 500;
+            lfo.connect(g); g.connect(a1.frequency); g.connect(a2.frequency);
+            lfo.start(when); lfo.stop(when + duration + 0.2);
+            cleanup.push(lfo);
+            current.connect(a1); a1.connect(a2); current = a2;
+          }else if(fx==='reverb'){
+            const out = this.audioCtx.createGain();
+            const dry = this.audioCtx.createGain(); dry.gain.value = 0.7;
+            const wet = this.audioCtx.createGain(); wet.gain.value = 0.45;
+            const conv = this.audioCtx.createConvolver(); conv.buffer = this._buildReverbIR();
+            current.connect(dry); dry.connect(out);
+            current.connect(conv); conv.connect(wet); wet.connect(out);
+            current = out;
+          }
+        }
+        current.connect(this.masterGain);
+      }
+
+      _playSliceWithPadFx(sliceIdx, padIdx){
+        if(!this.buffer) return;
+        const slices = this._sliceRegions();
+        const s = slices.find(x=>x.idx===sliceIdx) || slices[0];
+        if(!s) return;
+        const start = this._clamp(s.s, this.zoneStart, this.zoneEnd);
+        const end = this._clamp(s.e, start + 1/this.sampleRate, this.zoneEnd);
+        const fxList = this._selectedPadFxList(padIdx);
+
+        this.stop();
+        const src = this.audioCtx.createBufferSource();
+        src.buffer = this.buffer;
+        this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, start, end-start, 1, null, fxList);
+        try{ src.start(0, start, end-start); }catch(e){ console.warn(e); }
+        src.onended = ()=>{ if(this.source === src) this.source = null; };
+        this.source = src;
       }
 
       _triggerPerformancePad(localIdx){
@@ -1897,9 +2042,22 @@
         if(!slices.length){ this._toast('No slices/hitpoints available.'); return; }
         const clamped = this._clamp(idx, 0, slices.length-1);
 
+        if(this.perfPadMode==='effects'){
+          if(this.perfPadShift){
+            this.perfPadFxByPad[clamped] = 'none';
+            this._toast(`Cleared FX assignment for pad ${clamped+1}.`);
+          }else{
+            this.perfPadFxByPad[clamped] = this.perfPadFxSelected;
+            this.perfPadHotCue = clamped;
+            this._toast(`Assigned ${this.perfPadFxSelected.toUpperCase()} to pad ${clamped+1}.`);
+          }
+          this._refreshPerformancePads();
+          return;
+        }
+
         if(this.perfPadMode==='sampler'){
           if(this.perfPadShift){ this.perfPadHotCue = clamped; this._refreshPerformancePads(); return; }
-          this._auditionGridSlice(clamped);
+          this._playSliceWithPadFx(clamped, clamped);
           return;
         }
 
@@ -1921,10 +2079,6 @@
           this.needsRedraw = true;
           return;
         }
-
-        // effects mode stub actions
-        const names = ['A','B','C','D','E','F','G','H'];
-        this._toast(`Effect ${names[localIdx]} trigger${this.perfPadShift ? ' (alt)' : ''}`);
       }
 
       _initZoneEnvelopesUI(){
@@ -2036,9 +2190,14 @@
       _envValueToY(v, y, h){ return y + (1-v) * h; }
       _yToEnvValue(py, y, h){ return this._clamp(1 - ((py-y)/h), 0, 1); }
 
-      _applyEnvelopesForSource(src, chainIn, when, startOffset, playDur, playbackRate=1){
+      _applyEnvelopesForSource(src, chainIn, when, startOffset, playDur, playbackRate=1, outputNode=null, fxList=null){
+        const finalOut = outputNode || this.masterGain;
         const envs = this.zone.envelopes;
-        if(!envs.length){ chainIn.connect(this.masterGain); return chainIn; }
+        if(!envs.length){
+          if(fxList?.length) this._applyPadFxChain(chainIn, fxList, when, playDur);
+          else chainIn.connect(finalOut);
+          return chainIn;
+        }
 
         const gainNode = this.audioCtx.createGain();
         gainNode.gain.value = 1;
@@ -2046,8 +2205,15 @@
         if(panNode) panNode.pan.value = 0;
 
         chainIn.connect(gainNode);
-        if(panNode){ gainNode.connect(panNode); panNode.connect(this.masterGain); }
-        else gainNode.connect(this.masterGain);
+        if(panNode){
+          gainNode.connect(panNode);
+          if(fxList?.length) this._applyPadFxChain(panNode, fxList, when, playDur);
+          else panNode.connect(finalOut);
+        }
+        else{
+          if(fxList?.length) this._applyPadFxChain(gainNode, fxList, when, playDur);
+          else gainNode.connect(finalOut);
+        }
 
         const zoneDur = Math.max(0.001, this.zoneEnd - this.zoneStart);
         for(const env of envs){
