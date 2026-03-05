@@ -795,6 +795,20 @@
                       <option value="oneShot">One Shot</option>
                     </select>
                   </div>
+                  <div class="row" style="margin-top:6px;">
+                    <button class="btn" id="autoLoopApply">Auto Loop</button>
+                    <select class="select" id="loopRhythmLen" title="Loop rhythmic length">
+                      <option value="1/16">1/16</option>
+                      <option value="1/8">1/8</option>
+                      <option value="1/4">1/4</option>
+                      <option value="1/2">1/2</option>
+                      <option value="1bar" selected>1 bar</option>
+                      <option value="2bars">2 bars</option>
+                      <option value="4bars">4 bars</option>
+                    </select>
+                    <button class="btn" id="loopLenHalf" title="Half loop length">1/2x</button>
+                    <button class="btn" id="loopLenDouble" title="Double loop length">2x</button>
+                  </div>
                   <div class="small" style="margin-top:6px;color:var(--muted2);">
                     Drag loop borders/region; right-drag creates loop in selected slot.
                   </div>
@@ -1103,6 +1117,10 @@
         this.loopEndTimeEl = document.querySelector('#loopEndTime');
         this.xfadeSamplesEl = document.querySelector('#xfadeSamples');
         this.loopModeEl = document.querySelector('#loopMode');
+        this.loopRhythmLenEl = document.querySelector('#loopRhythmLen');
+        this.autoLoopApplyBtn = document.querySelector('#autoLoopApply');
+        this.loopLenHalfBtn = document.querySelector('#loopLenHalf');
+        this.loopLenDoubleBtn = document.querySelector('#loopLenDouble');
         this.loopTuneEl = document.querySelector('#loopTune');
         this.loopCountEl = document.querySelector('#loopCount');
         this.loopSlotPowerBtn = document.querySelector('#loopSlotPower');
@@ -1235,6 +1253,7 @@
         this.activeSlot = 0;
         this.loopGlobalPower = true;
         this.loopEditView = false;
+        this.loopRhythmLen = '1bar';
         this.currentTab = 'loop';
 
         // Snapping options
@@ -1462,6 +1481,10 @@
           L.mode = this.loopModeEl.value;
           this._renderLoopPanel();
         });
+        this.loopRhythmLenEl.addEventListener('change', ()=>{ this.loopRhythmLen = this.loopRhythmLenEl.value; });
+        this.autoLoopApplyBtn.addEventListener('click', ()=>this._applyRhythmicLoopLength(1));
+        this.loopLenHalfBtn.addEventListener('click', ()=>this._applyRhythmicLoopLength(0.5));
+        this.loopLenDoubleBtn.addEventListener('click', ()=>this._applyRhythmicLoopLength(2));
         this._bindDragNumeric(this.loopStartSamplesEl, { get:()=>Number(this.loopStartSamplesEl.value||0), set:(v)=>this._setLoopStartSamples(v), step:20 });
         this._bindDragNumeric(this.loopEndSamplesEl,   { get:()=>Number(this.loopEndSamplesEl.value||0), set:(v)=>this._setLoopEndSamples(v), step:20 });
         this._bindDragNumeric(this.xfadeSamplesEl,     { get:()=>Number(this.xfadeSamplesEl.value||0), set:(v)=>{ const L=this._activeLoop(); if(!L)return; L.xfadeMs=Math.max(0,v); }, step:0.5 });
@@ -3625,6 +3648,41 @@ ${source}
         this._toast(`DC Removal applied (mean=${mean.toFixed(6)}).`);
       }
 
+      _loopRhythmToBeats(token){
+        const beatsPerBar = Number((this.gridSig || '4/4').split('/')[0] || 4);
+        if(token === '1bar') return beatsPerBar;
+        if(token === '2bars') return beatsPerBar * 2;
+        if(token === '4bars') return beatsPerBar * 4;
+        if(token === '1/2') return 2;
+        if(token === '1/4') return 1;
+        if(token === '1/8') return 0.5;
+        if(token === '1/16') return 0.25;
+        return beatsPerBar;
+      }
+
+      _applyRhythmicLoopLength(scale=1){
+        if(!this.buffer) return;
+        const L = this._activeLoop();
+        if(!L) return;
+        const beats = this._loopRhythmToBeats(this.loopRhythmLen) * Math.max(0.125, scale);
+        const dur = beats * (60 / Math.max(20, this.gridBpm || 120));
+        const clampedDur = this._clamp(dur, 1/this.sampleRate, this.zoneEnd - this.zoneStart);
+
+        let start = this._clamp(L.start, this.zoneStart, this.zoneEnd - clampedDur);
+        let end = start + clampedDur;
+        if(end > this.zoneEnd){
+          end = this.zoneEnd;
+          start = this._clamp(end - clampedDur, this.zoneStart, this.zoneEnd - 1/this.sampleRate);
+        }
+
+        L.start = this._snapToGridMarkerIfNeeded(this._clamp(start, this.zoneStart, this.zoneEnd - 1/this.sampleRate));
+        L.end = this._snapToGridMarkerIfNeeded(this._clamp(end, L.start + 1/this.sampleRate, this.zoneEnd));
+        this._renderLoopPanel();
+        this._syncReadouts();
+        this.needsRedraw = true;
+        if(this._isPressed(this.autoPrelisten)) this._prelistenLoop();
+      }
+
       _nudgeLoop(edge, deltaSamples){
         if(!this.buffer) return;
         const L = this._activeLoop();
@@ -3861,6 +3919,7 @@ ${source}
         this.loopEndTimeEl.textContent = L.end.toFixed(3) + 's';
         this.xfadeSamplesEl.value = String((L.xfadeMs ?? 0).toFixed(2));
         this.loopModeEl.value = L.mode;
+        this.loopRhythmLenEl.value = this.loopRhythmLen;
         this.loopTuneEl.value = String(L.tune ?? 0);
         this.loopCountEl.value = String(L.count ?? 0);
         this.loopSlotPowerBtn.setAttribute('aria-pressed', String(!!L.active));
