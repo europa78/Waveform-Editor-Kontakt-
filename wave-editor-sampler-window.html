@@ -407,6 +407,11 @@
       font-family:var(--mono);
       user-select:none;
     }
+    .slot.on{
+      color: #dcecff;
+      background: linear-gradient(180deg, rgba(110,170,235,.70), rgba(70,120,180,.62));
+      border-color: rgba(120,180,255,.45);
+    }
     .slot.active{
       color: #0b1016;
       background: linear-gradient(180deg, rgba(242,193,78,.95), rgba(242,193,78,.70));
@@ -472,6 +477,10 @@
       background: linear-gradient(180deg, rgba(26,39,56,.55), rgba(18,26,36,.55));
       box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
     }
+    .gridPanel.off{
+      opacity:.55;
+      filter:saturate(.65);
+    }
     .gridPanel h3{
       margin:0 0 10px 0;
       font-size:13px;
@@ -499,6 +508,78 @@
       cursor:pointer;
     }
     .miniToggle[aria-pressed="true"]{ color: var(--txt); border-color: rgba(57,217,138,.45); }
+
+    .syncWrap{ display:grid; grid-template-columns: 1fr; gap:10px; }
+    .syncRow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .syncKeyboard{ border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:8px; background:rgba(0,0,0,.18); }
+    .kbGrid{ display:grid; grid-template-columns: repeat(24, minmax(18px,1fr)); gap:2px; }
+    .perfPads{ border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:8px; background:rgba(0,0,0,.16); display:grid; gap:8px; }
+    .perfPadsGrid{ display:grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap:6px; }
+    .perfPad{ height:34px; border:1px solid rgba(255,255,255,.18); border-radius:6px; background:linear-gradient(180deg, rgba(18,26,36,.82), rgba(8,12,17,.62)); color:var(--txt); font-size:12px; cursor:pointer; }
+    .perfPad.hot{ border-color: rgba(242,193,78,.75); box-shadow: inset 0 0 0 1px rgba(242,193,78,.28); }
+    .kbKey{ height:28px; border-radius:4px; border:1px solid rgba(255,255,255,.14); background:rgba(28,40,56,.75); }
+    .kbKey.black{ background:rgba(8,12,17,.85); height:20px; margin-top:0; }
+    .kbKey.mapped{ box-shadow: inset 0 0 0 2px rgba(242,193,78,.85); background: rgba(242,193,78,.35); }
+
+    .envWrap{ display:grid; gap:8px; }
+    .envRow{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .envRow .miniToggle, .envRow .btn{ height:26px; }
+    .envAssign{ border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:8px; background:rgba(0,0,0,.16); }
+    .sampleEditWrap{ display:grid; grid-template-columns: 1fr 220px; gap:10px; }
+    .sampleEditCols{ display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+
+    .mixerRack{ display:flex; align-items:flex-end; justify-content:center; gap:14px; padding:8px 10px 10px 10px; }
+    .chStrip{ width:52px; display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--muted2); font-size:10px; }
+    .chStrip input[type="range"]{ writing-mode: vertical-lr; direction: rtl; width:22px; height:118px; }
+    .mixCenter{ min-width:130px; text-align:center; border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:6px 8px; background:rgba(0,0,0,.18); font-size:11px; color:var(--muted2); }
+
+    .rackHeader, .instrumentHeader{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:6px 10px;
+      background: linear-gradient(180deg, rgba(56,72,91,.68), rgba(32,43,57,.72));
+      border-bottom:1px solid rgba(0,0,0,.35);
+      font-size:12px;
+      color:var(--muted);
+    }
+    .rackHeader .spacer, .instrumentHeader .spacer{ flex:1; }
+
+    .perfView{
+      margin:0 10px 10px 10px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:8px;
+      background:rgba(0,0,0,.2);
+      overflow:hidden;
+    }
+    .perfViewHead{ padding:6px 8px; border-bottom:1px solid rgba(255,255,255,.1); font-size:12px; color:var(--muted2); }
+    .perfViewBody{ padding:8px; min-height:34px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+
+    .scriptEditorPanel{
+      position:fixed;
+      inset:8% 8% 10% 8%;
+      z-index:90;
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:10px;
+      background: linear-gradient(180deg, rgba(38,52,68,.98), rgba(17,24,32,.98));
+      box-shadow: 0 16px 50px rgba(0,0,0,.55);
+      display:none;
+      flex-direction:column;
+      overflow:hidden;
+    }
+    .scriptEditorPanel.open{ display:flex; }
+    .scriptTop{ display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px solid rgba(255,255,255,.1); }
+    .scriptSlots{ display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap:4px; }
+    .scriptSlot{ height:26px; border:1px solid var(--edge); border-radius:4px; background:rgba(0,0,0,.25); color:var(--txt); cursor:pointer; font-size:12px; }
+    .scriptSlot.active{ border-color:rgba(242,193,78,.55); box-shadow: inset 0 0 0 1px rgba(242,193,78,.25); }
+    .scriptBody{ display:grid; grid-template-columns: 280px 1fr; min-height:0; flex:1; }
+    .scriptLeft{ border-right:1px solid rgba(255,255,255,.1); padding:8px; display:flex; flex-direction:column; gap:8px; }
+    .scriptRight{ padding:8px; display:flex; flex-direction:column; gap:8px; min-height:0; }
+    .scriptUiArea{ border:1px solid rgba(255,255,255,.12); border-radius:6px; background:rgba(0,0,0,.2); min-height:90px; padding:8px; overflow:auto; }
+    .scriptCode{ display:none; flex-direction:column; gap:8px; min-height:0; }
+    .scriptCode.open{ display:flex; flex:1; }
+    .scriptCode textarea{ width:100%; min-height:220px; resize:vertical; background:#0f151d; color:#dce7f6; border:1px solid rgba(255,255,255,.15); border-radius:6px; padding:8px; font-family:var(--mono); font-size:12px; }
+    .scriptMsg{ font-size:12px; color:var(--muted2); min-height:16px; }
 
     /* ---------- Toast ---------- */
     .toast{
@@ -598,6 +679,12 @@
         </div>
       </div>
 
+      <div class="rackHeader">
+        <span>Rack Header</span>
+        <div class="spacer"></div>
+        <button class="btn" id="globalKspBtn" title="Open global/multi script editor">KSP</button>
+      </div>
+
       <!-- ============================ STATUS BAR ============================ -->
       <div class="statusbar">
         <span class="label">Sample:</span>
@@ -610,6 +697,12 @@
           <span class="pill">Fmt <span id="roFmt">48000 • 24</span></span>
           <span class="pill">Len <span id="roLen">0.00s</span></span>
         </div>
+      </div>
+
+      <div class="instrumentHeader">
+        <span>Instrument Header (Edit Mode)</span>
+        <div class="spacer"></div>
+        <button class="btn" id="instrumentScriptBtn" title="Open instrument script editor">Script Editor</button>
       </div>
 
       <!-- ============================ MAIN (WAVEFORM) ============================ -->
@@ -639,11 +732,29 @@
         </div>
       </div>
 
+      <div class="mixerRack" id="mixerRack">
+        <div class="chStrip">
+          <b style="color:var(--txt);">CH 1</b>
+          <input id="ch1Fader" type="range" min="0" max="1" step="0.01" value="1" />
+          <span id="ch1Val">1.00</span>
+        </div>
+        <div class="mixCenter">
+          <div><b style="color:var(--txt);">MASTER</b></div>
+          <div style="color:#ff6f5f;font-weight:700;">CLIP</div>
+          <div style="font-family:var(--mono);" id="masterMixVal">0.90</div>
+        </div>
+        <div class="chStrip">
+          <b style="color:var(--txt);">CH 2</b>
+          <input id="ch2Fader" type="range" min="0" max="1" step="0.01" value="1" />
+          <span id="ch2Val">1.00</span>
+        </div>
+      </div>
+
       <!-- ============================ LOWER (TABS + GRID PANEL) ============================ -->
       <div class="lower">
         <div class="tabsWrap">
           <div class="tabs" role="tablist" aria-label="wave editor tabs">
-            <div class="tab active" data-tab="loop" role="tab" aria-selected="true">Sample Loop</div>
+            <div class="tab active" data-tab="loop" role="tab" aria-selected="true">Sample Loop <button class="miniToggle" id="loopGlobalPower" aria-pressed="true" title="Global loop power">⟲</button></div>
             <div class="tab" data-tab="sync" role="tab" aria-selected="false">Sync / Slice</div>
             <div class="tab" data-tab="env" role="tab" aria-selected="false">Zone Envelopes</div>
             <div class="tab" data-tab="edit" role="tab" aria-selected="false">Sample Editor</div>
@@ -688,33 +799,182 @@
                 </div>
 
                 <div class="field">
-                  <div class="lbl">X-Fade / Mode</div>
+                  <div class="lbl">Loop Controls</div>
+                  <div class="row" style="margin-bottom:6px;">
+                    <button class="miniToggle" id="loopSlotPower" aria-pressed="true">Power</button>
+                    <button class="miniToggle" id="loopEditToggle" aria-pressed="false">Loop Edit</button>
+                  </div>
+                  <div class="row" style="margin-bottom:6px;">
+                    <input class="num" id="xfadeSamples" inputmode="numeric" value="0" title="Crossfade (ms)" style="width:80px;" />
+                    <input class="num" id="loopTune" inputmode="numeric" value="0" title="Tune" style="width:72px;" />
+                    <input class="num" id="loopCount" inputmode="numeric" value="0" title="Count" style="width:72px;" />
+                  </div>
                   <div class="row">
-                    <input class="num" id="xfadeSamples" inputmode="numeric" value="0" title="Crossfade (samples)" />
                     <select class="select" id="loopMode">
-                      <option value="untilEnd">until end</option>
-                      <option value="oneShot">one-shot</option>
-                      <option value="pingPong">ping-pong</option>
+                      <option value="untilEnd">Until End</option>
+                      <option value="untilEndPingPong">Until End ↔</option>
+                      <option value="untilRelease">Until Release</option>
+                      <option value="untilReleasePingPong">Until Release ↔</option>
+                      <option value="oneShot">One Shot</option>
                     </select>
                   </div>
+                  <div class="row" style="margin-top:6px;">
+                    <button class="btn" id="autoLoopApply">Auto Loop</button>
+                    <select class="select" id="loopRhythmLen" title="Loop rhythmic length">
+                      <option value="1/16">1/16</option>
+                      <option value="1/8">1/8</option>
+                      <option value="1/4">1/4</option>
+                      <option value="1/2">1/2</option>
+                      <option value="1bar" selected>1 bar</option>
+                      <option value="2bars">2 bars</option>
+                      <option value="4bars">4 bars</option>
+                    </select>
+                    <button class="btn" id="loopLenHalf" title="Half loop length">1/2x</button>
+                    <button class="btn" id="loopLenDouble" title="Double loop length">2x</button>
+                  </div>
                   <div class="small" style="margin-top:6px;color:var(--muted2);">
-                    Drag the yellow loop markers in the waveform view.
+                    Drag loop borders/region; right-drag creates loop in selected slot.
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="panel" id="panelOther" style="display:none;">
-            <div style="color:var(--muted); font-size:13px; line-height:1.35;">
-              This tab is a placeholder in this first build. Next iterations can add slicing/grid markers,
-              envelope editors, and destructive sample edits.
+          <div class="panel" id="panelSync" style="display:none;">
+            <div class="syncWrap">
+              <div class="syncRow">
+                <span style="font-size:12px;color:var(--muted2);">Zone Length</span>
+                <input class="num" id="zoneLength" value="4" title="Zone length in beats" style="width:80px;" />
+                <select class="select" id="beatSpeedMode"><option value="zone">Zone</option><option value="1/4">1/4</option><option value="1/8">1/8</option><option value="default">Default</option></select>
+                <button class="miniToggle" id="useBeatmachine" aria-pressed="false">Use Beatmachine</button>
+                <button class="miniToggle" id="useTimemachine" aria-pressed="false">Use Timemachine Pro</button>
+              </div>
+              <div class="syncRow">
+                <button class="btn" id="autoMapSlices">Auto-map slices</button>
+                <button class="btn" id="dragMidiHost">Drag MIDI to Host</button>
+                <button class="btn" id="autoFindEmptyKeys">Auto Find Empty Keys</button>
+                <button class="btn" id="loopSelectedSlice">Loop Selected Slice</button>
+                <button class="miniToggle" id="loopOnSliceSelect" aria-pressed="true">Loop on select</button>
+              </div>
+              <div class="syncRow">
+                <span style="font-size:12px;color:var(--muted2);">Hitpoint Threshold</span>
+                <input id="hitpointThreshold" type="range" min="0.02" max="0.95" step="0.01" value="0.35" style="width:170px;" />
+                <span class="pill" id="hitpointThresholdPill">0.35</span>
+              </div>
+              <div class="syncKeyboard" id="syncKeyboard"><div class="kbGrid" id="kbGrid"></div></div>
+              <div class="perfPads" id="perfPads">
+                <div class="syncRow">
+                  <span style="font-size:12px;color:var(--muted2);">Performance Pads</span>
+                  <button class="miniToggle" id="ppModeSampler" aria-pressed="true">Sampler</button>
+                  <button class="miniToggle" id="ppModeKeyboard" aria-pressed="false">Key Shift</button>
+                  <button class="miniToggle" id="ppModeBeatJump" aria-pressed="false">Beat Loop</button>
+                  <button class="miniToggle" id="ppModeEffects" aria-pressed="false">Effects</button>
+                  <button class="miniToggle" id="ppShift" aria-pressed="false">SHIFT</button>
+                  <button class="btn icon" id="ppParamMinus">◀</button>
+                  <button class="btn icon" id="ppParamPlus">▶</button>
+                </div>
+                <div class="syncRow">
+                  <span style="font-size:12px;color:var(--muted2);">Pad FX</span>
+                  <select class="select" id="ppFxSelect" style="height:26px;">
+                    <option value="none">None</option>
+                    <option value="echo">Echo</option>
+                    <option value="flanger">Flanger</option>
+                    <option value="phaser">Phaser</option>
+                    <option value="reverb">Reverb</option>
+                  </select>
+                  <button class="btn" id="ppFxAssign">Assign to Pad</button>
+                  <button class="btn" id="ppFxClear">Clear Pad FX</button>
+                </div>
+                <div class="syncRow">
+                  <span style="font-size:12px;color:var(--muted2);">FX Chain</span>
+                  <button class="miniToggle" id="ppChainEcho" aria-pressed="true">Echo</button>
+                  <button class="miniToggle" id="ppChainFlanger" aria-pressed="false">Flanger</button>
+                  <button class="miniToggle" id="ppChainPhaser" aria-pressed="false">Phaser</button>
+                  <button class="miniToggle" id="ppChainReverb" aria-pressed="false">Reverb</button>
+                </div>
+                <div class="perfPadsGrid" id="perfPadsGrid"></div>
+                <div class="small" id="perfPadsHint" style="color:var(--muted2);">Pads trigger slices from current hitpoints.</div>
+                <details class="small" style="color:var(--muted2); margin-top:4px;">
+                  <summary style="cursor:pointer;">Performance Pad manual notes</summary>
+                  <div style="margin-top:6px; line-height:1.35;">
+                    <b>Sampler mode:</b> Press a pad to play its assigned slice. Hold <b>SHIFT</b> and press pad to set hot cue.<br/>
+                    <b>Beat Loop mode:</b> Pad rows map to 1/64, 1/32, 1/16, 1/8, 1/4, 1/2, 1, 2 beats (or bar bank). Press same pad again to cancel loop.<br/>
+                    <b>Key Shift mode:</b> Pads play the hot-cue slice with per-pad semitone shifts. Use ◀/▶ to shift assignment bank.
+                  </div>
+                </details>
+              </div>
             </div>
+          </div>
+
+          <div class="panel" id="panelEnv" style="display:none;">
+            <div class="envWrap">
+              <div class="envRow">
+                <span style="font-size:12px;color:var(--muted2);">Visible Env</span>
+                <select class="select" id="envVisible"></select>
+                <button class="btn" id="envDelete">Delete</button>
+              </div>
+              <div class="envRow">
+                <button class="btn" id="envAssignVol">Volume</button>
+                <button class="btn" id="envAssignPan">Pan</button>
+                <span class="pill" id="envPending">Add: none</span>
+                <button class="btn" id="envAssignAdd">Add</button>
+              </div>
+              <div class="envAssign" id="envAssignPanel">
+                <div class="envRow">
+                  <span style="font-size:12px;color:var(--muted2);">Depth</span>
+                  <input id="envDepth" type="range" min="-1" max="1" step="0.01" value="1" style="width:140px;" />
+                  <button class="miniToggle" id="envInvert" aria-pressed="false">Invert</button>
+                  <span style="font-size:12px;color:var(--muted2);">Lag</span>
+                  <input class="num" id="envLag" value="0" style="width:66px;" />
+                  <button class="btn" id="envQuickJump">Quick Jump</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" id="panelEdit" style="display:none;">
+            <div class="sampleEditWrap">
+              <div>
+                <div class="sampleEditCols">
+                  <div class="field">
+                    <div class="lbl">Edit</div>
+                    <div class="row">
+                      <button class="btn" id="seCut">Cut</button><button class="btn" id="seCopy">Copy</button><button class="btn" id="sePaste">Paste</button>
+                      <button class="btn" id="seCrop">Crop</button><button class="btn" id="seDelete">Delete</button><button class="btn" id="seDuplicate">Duplicate</button>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <div class="lbl">Transform</div>
+                    <div class="row">
+                      <button class="btn" id="seFadeIn">Fade In</button><button class="btn" id="seFadeOut">Fade Out</button><button class="btn" id="seSilence">Silence</button>
+                      <button class="btn" id="seReverse">Reverse</button><button class="btn" id="seNormalize">Normalize</button><button class="btn" id="seDcRem">DC Rem.</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="field" style="margin-top:8px;">
+                  <div class="lbl">Selection</div>
+                  <div class="row">
+                    <span style="font-size:12px;color:var(--muted2);">Start</span><input class="num" id="seSelStart" value="0" style="width:90px;" />
+                    <span style="font-size:12px;color:var(--muted2);">End</span><input class="num" id="seSelEnd" value="0" style="width:90px;" />
+                    <span style="font-size:12px;color:var(--muted2);">Length</span><input class="num" id="seSelLen" value="0" style="width:90px;" />
+                    <button class="miniToggle" id="seAutoPrelisten" aria-pressed="false">Auto Pre-Listen</button>
+                  </div>
+                </div>
+              </div>
+              <div class="field">
+                <div class="lbl">History</div>
+                <div class="row"><button class="btn" id="seUndo">Undo</button><button class="btn" id="seRedo">Redo</button><button class="btn" id="seRestore">Restore Orig</button></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" id="panelOther" style="display:none;">
+            <div style="color:var(--muted); font-size:13px; line-height:1.35;">Sample Editor placeholder.</div>
           </div>
         </div>
 
         <aside class="gridPanel" aria-label="grid panel">
-          <h3>🧭 Grid</h3>
+          <h3>🧭 Grid <button class="miniToggle" id="gridPower" aria-pressed="true">Power</button></h3>
           <div class="gRow">
             <span>Width</span>
             <div class="row" style="gap:6px;">
@@ -732,21 +992,80 @@
           </div>
           <div class="gRow">
             <span>BPM</span>
-            <span class="pill" id="bpmPill">126.32</span>
+            <div class="row" style="gap:6px;">
+              <button class="btn icon" id="bpmHalf" title="BPM halve">−</button>
+              <span class="pill" id="bpmPill">126.32</span>
+              <button class="btn icon" id="bpmDouble" title="BPM double">+</button>
+            </div>
           </div>
           <div class="gRow">
             <span>Signature</span>
-            <span class="pill" id="sigPill">4/4</span>
+            <select class="select" id="sigSelect">
+              <option value="4/4">4/4</option>
+              <option value="3/4">3/4</option>
+              <option value="6/8">6/8</option>
+            </select>
           </div>
-
-          <div style="margin-top:12px; font-size:12px; color:var(--muted2); line-height:1.35;">
-            Grid/slicing is scaffolded here for later. In this build, the waveform view focuses on
-            <b>loop</b> + <b>zone</b> markers, snapping, magnify zoom, and transport.
+          <div class="gRow" id="autoThresholdRow">
+            <span>Threshold</span>
+            <input id="gridThreshold" type="range" min="0" max="1" step="0.01" value="0.35" style="width:130px;" />
+          </div>
+          <div class="gRow" id="minSliceRow">
+            <span>Min Slice (ms)</span>
+            <input class="num" id="minSliceMs" inputmode="numeric" value="35" style="width:80px;" />
+          </div>
+          <div class="gRow">
+            <span>Tools</span>
+            <div class="row" style="gap:6px;">
+              <button class="miniToggle" id="gridToolAdd" aria-pressed="false">＋</button>
+              <button class="miniToggle" id="gridToolRemove" aria-pressed="false">−</button>
+              <button class="miniToggle" id="gridToolLock" aria-pressed="false">Lock</button>
+            </div>
+          </div>
+          <div style="margin-top:8px; font-size:12px; color:var(--muted2); line-height:1.35;">
+            Drag marker <b>1</b> to offset following unlocked markers. Top handles audition slices.
           </div>
         </aside>
       </div>
+
+      <section class="perfView" id="perfView">
+        <div class="perfViewHead">Performance View (script controls)</div>
+        <div class="perfViewBody" id="perfViewContent"><span style="color:var(--muted2);font-size:12px;">No script controls visible.</span></div>
+      </section>
     </div>
   </div>
+
+  <section class="scriptEditorPanel" id="scriptEditorPanel" aria-label="Script Editor">
+    <div class="scriptTop">
+      <strong id="scriptEditorTitle">Script Editor</strong>
+      <div class="spacer"></div>
+      <button class="btn" id="scriptEditorClose">Close</button>
+    </div>
+    <div style="padding:8px; border-bottom:1px solid rgba(255,255,255,.1);">
+      <div class="scriptSlots" id="scriptSlotTabs"></div>
+    </div>
+    <div class="scriptBody">
+      <div class="scriptLeft">
+        <button class="btn toggle" id="scriptBypassBtn" aria-pressed="false">Bypass</button>
+        <select class="select" id="scriptPresetSelect"></select>
+        <button class="btn" id="scriptLoadPresetBtn">Load Preset</button>
+        <button class="btn" id="scriptEditBtn">Edit</button>
+        <button class="btn" id="scriptSavePresetBtn">Save Preset</button>
+        <div class="scriptMsg" id="scriptStatusMsg"></div>
+      </div>
+      <div class="scriptRight">
+        <div class="scriptUiArea" id="scriptUiArea"></div>
+        <div class="scriptCode" id="scriptCodePanel">
+          <textarea id="scriptSource"></textarea>
+          <div class="row" style="gap:6px;">
+            <button class="btn" id="scriptApplyBtn">Apply</button>
+            <button class="btn" id="scriptLockBtn">Lock with Password</button>
+          </div>
+          <div class="scriptMsg" id="scriptCompileMsg"></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- Menus -->
   <div class="menu" id="snapMenu" role="menu" aria-label="snap menu"></div>
@@ -798,6 +1117,27 @@
         this.popOutBtn = document.querySelector('#popOutBtn');
         this.loadBtn = document.querySelector('#loadBtn');
         this.fileInput = document.querySelector('#fileInput');
+        this.globalKspBtn = document.querySelector('#globalKspBtn');
+        this.instrumentScriptBtn = document.querySelector('#instrumentScriptBtn');
+        this.perfViewEl = document.querySelector('#perfView');
+        this.perfViewContentEl = document.querySelector('#perfViewContent');
+
+        this.scriptEditorPanel = document.querySelector('#scriptEditorPanel');
+        this.scriptEditorTitle = document.querySelector('#scriptEditorTitle');
+        this.scriptEditorCloseBtn = document.querySelector('#scriptEditorClose');
+        this.scriptSlotTabs = document.querySelector('#scriptSlotTabs');
+        this.scriptBypassBtn = document.querySelector('#scriptBypassBtn');
+        this.scriptPresetSelect = document.querySelector('#scriptPresetSelect');
+        this.scriptLoadPresetBtn = document.querySelector('#scriptLoadPresetBtn');
+        this.scriptEditBtn = document.querySelector('#scriptEditBtn');
+        this.scriptSavePresetBtn = document.querySelector('#scriptSavePresetBtn');
+        this.scriptStatusMsg = document.querySelector('#scriptStatusMsg');
+        this.scriptUiArea = document.querySelector('#scriptUiArea');
+        this.scriptCodePanel = document.querySelector('#scriptCodePanel');
+        this.scriptSource = document.querySelector('#scriptSource');
+        this.scriptApplyBtn = document.querySelector('#scriptApplyBtn');
+        this.scriptLockBtn = document.querySelector('#scriptLockBtn');
+        this.scriptCompileMsg = document.querySelector('#scriptCompileMsg');
 
         this.stopBtn = document.querySelector('#stopBtn');
         this.playBtn = document.querySelector('#playBtn');
@@ -810,6 +1150,11 @@
         this.fitYBtn = document.querySelector('#fitY');
         this.zoomInBtn = document.querySelector('#zoomIn');
         this.zoomOutBtn = document.querySelector('#zoomOut');
+        this.ch1FaderEl = document.querySelector('#ch1Fader');
+        this.ch2FaderEl = document.querySelector('#ch2Fader');
+        this.ch1ValEl = document.querySelector('#ch1Val');
+        this.ch2ValEl = document.querySelector('#ch2Val');
+        this.masterMixValEl = document.querySelector('#masterMixVal');
 
         // Status readouts
         this.sampleNameEl = document.querySelector('#sampleName');
@@ -827,16 +1172,111 @@
         this.loopEndTimeEl = document.querySelector('#loopEndTime');
         this.xfadeSamplesEl = document.querySelector('#xfadeSamples');
         this.loopModeEl = document.querySelector('#loopMode');
+        this.loopRhythmLenEl = document.querySelector('#loopRhythmLen');
+        this.autoLoopApplyBtn = document.querySelector('#autoLoopApply');
+        this.loopLenHalfBtn = document.querySelector('#loopLenHalf');
+        this.loopLenDoubleBtn = document.querySelector('#loopLenDouble');
+        this.loopTuneEl = document.querySelector('#loopTune');
+        this.loopCountEl = document.querySelector('#loopCount');
+        this.loopSlotPowerBtn = document.querySelector('#loopSlotPower');
+        this.loopGlobalPowerBtn = document.querySelector('#loopGlobalPower');
+        this.loopEditToggleBtn = document.querySelector('#loopEditToggle');
 
         this.nudgeLoopStartMinus = document.querySelector('#nudgeLoopStartMinus');
         this.nudgeLoopStartPlus  = document.querySelector('#nudgeLoopStartPlus');
         this.nudgeLoopEndMinus   = document.querySelector('#nudgeLoopEndMinus');
         this.nudgeLoopEndPlus    = document.querySelector('#nudgeLoopEndPlus');
 
+
+        // Grid panel
+        this.gridPanel = document.querySelector('.gridPanel');
+        this.gridPowerBtn = document.querySelector('#gridPower');
+        this.gridMinusBtn = document.querySelector('#gridMinus');
+        this.gridPlusBtn = document.querySelector('#gridPlus');
+        this.gridWidthPill = document.querySelector('#gridWidthPill');
+        this.gridFixBtn = document.querySelector('#gridFix');
+        this.gridAutoBtn = document.querySelector('#gridAuto');
+        this.bpmPill = document.querySelector('#bpmPill');
+        this.bpmHalfBtn = document.querySelector('#bpmHalf');
+        this.bpmDoubleBtn = document.querySelector('#bpmDouble');
+        this.sigSelect = document.querySelector('#sigSelect');
+        this.gridThresholdEl = document.querySelector('#gridThreshold');
+        this.autoThresholdRow = document.querySelector('#autoThresholdRow');
+        this.minSliceRow = document.querySelector('#minSliceRow');
+        this.minSliceMsEl = document.querySelector('#minSliceMs');
+        this.gridToolAddBtn = document.querySelector('#gridToolAdd');
+        this.gridToolRemoveBtn = document.querySelector('#gridToolRemove');
+        this.gridToolLockBtn = document.querySelector('#gridToolLock');
+
         // Tabs
         this.tabEls = Array.from(document.querySelectorAll('.tab'));
         this.panelLoop = document.querySelector('#panelLoop');
+        this.panelSync = document.querySelector('#panelSync');
+        this.panelEnv = document.querySelector('#panelEnv');
+        this.panelEdit = document.querySelector('#panelEdit');
         this.panelOther = document.querySelector('#panelOther');
+
+        this.seCutBtn = document.querySelector('#seCut');
+        this.seCopyBtn = document.querySelector('#seCopy');
+        this.sePasteBtn = document.querySelector('#sePaste');
+        this.seCropBtn = document.querySelector('#seCrop');
+        this.seDeleteBtn = document.querySelector('#seDelete');
+        this.seDuplicateBtn = document.querySelector('#seDuplicate');
+        this.seFadeInBtn = document.querySelector('#seFadeIn');
+        this.seFadeOutBtn = document.querySelector('#seFadeOut');
+        this.seSilenceBtn = document.querySelector('#seSilence');
+        this.seReverseBtn = document.querySelector('#seReverse');
+        this.seNormalizeBtn = document.querySelector('#seNormalize');
+        this.seDcRemBtn = document.querySelector('#seDcRem');
+        this.seSelStartEl = document.querySelector('#seSelStart');
+        this.seSelEndEl = document.querySelector('#seSelEnd');
+        this.seSelLenEl = document.querySelector('#seSelLen');
+        this.seAutoPrelistenBtn = document.querySelector('#seAutoPrelisten');
+        this.seUndoBtn = document.querySelector('#seUndo');
+        this.seRedoBtn = document.querySelector('#seRedo');
+        this.seRestoreBtn = document.querySelector('#seRestore');
+
+        this.envVisibleEl = document.querySelector('#envVisible');
+        this.envDeleteBtn = document.querySelector('#envDelete');
+        this.envAssignVolBtn = document.querySelector('#envAssignVol');
+        this.envAssignPanBtn = document.querySelector('#envAssignPan');
+        this.envPendingEl = document.querySelector('#envPending');
+        this.envAssignAddBtn = document.querySelector('#envAssignAdd');
+        this.envDepthEl = document.querySelector('#envDepth');
+        this.envInvertBtn = document.querySelector('#envInvert');
+        this.envLagEl = document.querySelector('#envLag');
+        this.envQuickJumpBtn = document.querySelector('#envQuickJump');
+        this.envAssignPanel = document.querySelector('#envAssignPanel');
+
+        this.zoneLengthEl = document.querySelector('#zoneLength');
+        this.beatSpeedModeEl = document.querySelector('#beatSpeedMode');
+        this.useBeatmachineBtn = document.querySelector('#useBeatmachine');
+        this.useTimemachineBtn = document.querySelector('#useTimemachine');
+        this.autoMapSlicesBtn = document.querySelector('#autoMapSlices');
+        this.dragMidiHostBtn = document.querySelector('#dragMidiHost');
+        this.autoFindEmptyKeysBtn = document.querySelector('#autoFindEmptyKeys');
+        this.loopSelectedSliceBtn = document.querySelector('#loopSelectedSlice');
+        this.loopOnSliceSelectBtn = document.querySelector('#loopOnSliceSelect');
+        this.hitpointThresholdEl = document.querySelector('#hitpointThreshold');
+        this.hitpointThresholdPill = document.querySelector('#hitpointThresholdPill');
+        this.syncKeyboard = document.querySelector('#syncKeyboard');
+        this.kbGrid = document.querySelector('#kbGrid');
+        this.perfPadsGrid = document.querySelector('#perfPadsGrid');
+        this.perfPadsHint = document.querySelector('#perfPadsHint');
+        this.ppModeSamplerBtn = document.querySelector('#ppModeSampler');
+        this.ppModeKeyboardBtn = document.querySelector('#ppModeKeyboard');
+        this.ppModeBeatJumpBtn = document.querySelector('#ppModeBeatJump');
+        this.ppModeEffectsBtn = document.querySelector('#ppModeEffects');
+        this.ppShiftBtn = document.querySelector('#ppShift');
+        this.ppParamMinusBtn = document.querySelector('#ppParamMinus');
+        this.ppParamPlusBtn = document.querySelector('#ppParamPlus');
+        this.ppFxSelectEl = document.querySelector('#ppFxSelect');
+        this.ppFxAssignBtn = document.querySelector('#ppFxAssign');
+        this.ppFxClearBtn = document.querySelector('#ppFxClear');
+        this.ppChainEchoBtn = document.querySelector('#ppChainEcho');
+        this.ppChainFlangerBtn = document.querySelector('#ppChainFlanger');
+        this.ppChainPhaserBtn = document.querySelector('#ppChainPhaser');
+        this.ppChainReverbBtn = document.querySelector('#ppChainReverb');
 
         // Menus
         this.snapMenu = document.querySelector('#snapMenu');
@@ -853,6 +1293,8 @@
         this.bitDepth = 24;          // display only
         this.source = null;
         this.masterGain = null;
+        this.ch1Level = 1;
+        this.ch2Level = 1;
 
         // ---- Editor state
         this.zoomY = 1.0;
@@ -866,10 +1308,17 @@
         this.loopSlots = Array.from({length:8}, (_,i)=>({
           start: 0.0,
           end: 1.0,
-          xfade: 0,
-          mode: 'untilEnd'
+          xfadeMs: 0,
+          tune: 0,
+          count: 0,
+          mode: 'untilEnd',
+          active: i===0
         }));
         this.activeSlot = 0;
+        this.loopGlobalPower = true;
+        this.loopEditView = false;
+        this.loopRhythmLen = '1bar';
+        this.currentTab = 'loop';
 
         // Snapping options
         this.snapLoopMode = 'none';      // 'none' | 'zero' | 'value'
@@ -877,6 +1326,70 @@
 
         // Magnify tool
         this.magnify = false;
+
+        // Grid + slicing
+        this.gridPower = true;
+        this.gridMode = 'auto';
+        this.gridWidthOptions = ['1/1','1/2','1/4','1/8','1/16'];
+        this.gridWidthIdx = 0;
+        this.gridBpm = 126.32;
+        this.gridSig = '4/4';
+        this.gridThreshold = 0.35;
+        this.hitpointThreshold = 0.35;
+        this.minSliceMs = 35;
+        this.gridMarkers = [];
+        this.gridOffset = 0;
+        this.gridTransientCandidates = [];
+        this.gridTool = 'move';
+
+        // Sync/Slice
+        this.syncMode = 'none'; // none|beatmachine|timemachine
+        this.zoneLengthBeats = 4;
+        this.beatSpeedMode = 'zone';
+        this.syncAutoFindEmpty = false;
+        this.selectedSlices = new Set();
+        this.mappedZones = [];
+        this._beatTimer = null;
+        this._beatPlaying = false;
+        this._beatIdx = 0;
+
+        // Performance pads
+        this.perfPadMode = 'sampler';
+        this.perfPadShift = false;
+        this.perfPadParamOffset = 0;
+        this.perfPadHotCue = 0;
+        this.perfPadFxSelected = 'echo';
+        this.perfPadFxByPad = Array.from({length:128}, ()=> 'none');
+        this.perfPadChain = { echo:true, flanger:false, phaser:false, reverb:false };
+        this.fxReverbIR = null;
+        this.perfPadBeatLoopBank = 0; // 0=beats, 1=bars
+        this.perfPadBeatLoopActivePad = -1;
+        this.perfPadKeyShiftBase = -4;
+
+        // Zone Envelopes
+        this.zone = { envelopes: [], visibleEnvelopeId: null, pendingTarget: null };
+        this.selectedEnvPointIdx = -1;
+
+        // Sample Editor
+        this.editCursorT = 0;
+        this.editSel = null; // {s,e}
+        this.editClipboard = null; // {channels:Float32Array[], sampleRate}
+        this.editUndo = [];
+        this.editRedo = [];
+        this.originalWorking = null;
+
+        // Script editor
+        this.scriptBuiltinPresets = this._createScriptBuiltinPresets();
+        this.scriptUserPresets = this._loadScriptUserPresets();
+        this.scriptEditors = {
+          global: this._createScriptEditorState('Global'),
+          instrument: this._createScriptEditorState('Instrument')
+        };
+        this.activeScriptContext = 'instrument';
+        this.activeScriptSlotIdx = 0;
+
+        // Vertical view
+        this.viewOffsetY = 0;
 
         // Dragging / interactions
         this.drag = null;   // {type:'zoneStart'|'zoneEnd'|'loopStart'|'loopEnd'|'frame', startX, ...}
@@ -895,6 +1408,11 @@
         this._initAudioDemo();
         this._renderLoopPanel();
         this._syncReadouts();
+        this._initSyncSliceUI();
+        this._initPerformancePadsUI();
+        this._initZoneEnvelopesUI();
+        this._initSampleEditorUI();
+        this._initScriptEditorUI();
         this._tick();
       }
 
@@ -944,21 +1462,74 @@
           if(f) this.loadFile(f);
           e.target.value = '';
         });
+        this.globalKspBtn.addEventListener('click', ()=>this._openScriptEditor('global'));
+        this.instrumentScriptBtn.addEventListener('click', ()=>this._openScriptEditor('instrument'));
+        this.scriptEditorCloseBtn.addEventListener('click', ()=>this._closeScriptEditor());
 
         // Side strip
         this.zoomYPlus.addEventListener('click', ()=>{ this.zoomY = Math.min(10, this.zoomY*1.25); this.needsRedraw=true; });
         this.zoomYMinus.addEventListener('click', ()=>{ this.zoomY = Math.max(0.2, this.zoomY/1.25); this.needsRedraw=true; });
-        this.fitYBtn.addEventListener('click', ()=>{ this.zoomY = 1.0; this.needsRedraw=true; });
+        this.fitYBtn.addEventListener('click', ()=>{ this.zoomY = 1.0; this.viewOffsetY = 0; this.needsRedraw=true; });
 
         this.zoomInBtn.addEventListener('click', ()=>this._zoomAround((this.viewStart+this.viewEnd)/2, 0.6));
         this.zoomOutBtn.addEventListener('click', ()=>this._zoomOutOne());
+
+        const syncCh = ()=>{
+          this.ch1Level = this._clamp(Number(this.ch1FaderEl.value), 0, 1);
+          this.ch2Level = this._clamp(Number(this.ch2FaderEl.value), 0, 1);
+          this._syncChannelMixer();
+        };
+        this.ch1FaderEl.addEventListener('input', syncCh);
+        this.ch2FaderEl.addEventListener('input', syncCh);
+        this._syncChannelMixer();
+
+        // Grid controls
+        this.gridPowerBtn.addEventListener('click', ()=>{
+          this.gridPower = !this.gridPower;
+          this._rebuildGridMarkers();
+          this._syncGridPanelUI();
+          this.needsRedraw = true;
+        });
+        this.gridFixBtn.addEventListener('click', ()=>{ this.gridMode = 'fix'; this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.gridAutoBtn.addEventListener('click', ()=>{ this.gridMode = 'auto'; this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.gridMinusBtn.addEventListener('click', ()=>{ this.gridWidthIdx = this._clamp(this.gridWidthIdx + 1, 0, this.gridWidthOptions.length-1); this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.gridPlusBtn.addEventListener('click', ()=>{ this.gridWidthIdx = this._clamp(this.gridWidthIdx - 1, 0, this.gridWidthOptions.length-1); this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.bpmHalfBtn.addEventListener('click', ()=>{ this.gridBpm = Math.max(20, this.gridBpm / 2); this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.bpmDoubleBtn.addEventListener('click', ()=>{ this.gridBpm = Math.min(400, this.gridBpm * 2); this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.sigSelect.addEventListener('change', ()=>{ this.gridSig = this.sigSelect.value; this._rebuildGridMarkers(); this._syncGridPanelUI(); });
+        this.gridThresholdEl.addEventListener('input', ()=>{ this.gridThreshold = Number(this.gridThresholdEl.value); this.hitpointThreshold = this.gridThreshold; if(this.hitpointThresholdEl) this.hitpointThresholdEl.value = String(this.gridThreshold); if(this.hitpointThresholdPill) this.hitpointThresholdPill.textContent = this.gridThreshold.toFixed(2); if(this.gridMode==='auto'){ this._rebuildGridMarkers(); this.needsRedraw = true; } });
+        this.minSliceMsEl.addEventListener('change', ()=>{
+          const n = Number(this.minSliceMsEl.value);
+          if(Number.isFinite(n)) this.minSliceMs = this._clamp(n, 0, 1000);
+          this.minSliceMsEl.value = String(Math.round(this.minSliceMs));
+          if(this.gridMode==='auto') this._rebuildGridMarkers();
+          this.needsRedraw = true;
+        });
+        this.gridToolAddBtn.addEventListener('click', ()=>this._setGridTool(this.gridTool==='add'?'move':'add'));
+        this.gridToolRemoveBtn.addEventListener('click', ()=>this._setGridTool(this.gridTool==='remove'?'move':'remove'));
+        this.gridToolLockBtn.addEventListener('click', (e)=>{
+          if(e.altKey){
+            const shouldLock = this.gridMarkers.some(m=>!m.locked);
+            this.gridMarkers.forEach(m=>m.locked = shouldLock);
+            this.needsRedraw = true;
+            return;
+          }
+          this._setGridTool(this.gridTool==='lock'?'move':'lock');
+        });
 
         // Loop panel: slots
         this.slotEls.forEach(el=>{
           el.addEventListener('click', ()=>{
             const idx = Number(el.dataset.slot);
             this.activeSlot = idx;
-            this.slotEls.forEach(s=>s.classList.toggle('active', Number(s.dataset.slot)===idx));
+            const L = this.loopSlots[idx];
+            if(!L.active){
+              L.active = true;
+              if(!Number.isFinite(L.end) || L.end <= L.start){
+                L.start = this.zoneStart;
+                L.end = Math.min(this.zoneEnd, this.zoneStart + Math.max(0.02, (this.zoneEnd-this.zoneStart)*0.25));
+              }
+            }
             this._renderLoopPanel();
             this.needsRedraw = true;
             if(this._isPressed(this.autoPrelisten)) this._prelistenLoop();
@@ -976,12 +1547,47 @@
         onNum(this.loopStartSamplesEl, (n)=>this._setLoopStartSamples(n));
         onNum(this.loopEndSamplesEl, (n)=>this._setLoopEndSamples(n));
         onNum(this.xfadeSamplesEl, (n)=>{
-          this._activeLoop().xfade = Math.max(0, Math.floor(n));
+          const L = this._activeLoop();
+          if(!L) return;
+          L.xfadeMs = Math.max(0, n);
+          this._renderLoopPanel();
+          this.needsRedraw = true;
+        });
+        onNum(this.loopTuneEl, (n)=>{ const L=this._activeLoop(); if(!L) return; L.tune=n; this._renderLoopPanel(); });
+        onNum(this.loopCountEl, (n)=>{ const L=this._activeLoop(); if(!L) return; L.count=Math.max(0, Math.floor(n)); this._renderLoopPanel(); });
+        this.loopModeEl.addEventListener('change', ()=>{
+          const L = this._activeLoop();
+          if(!L) return;
+          L.mode = this.loopModeEl.value;
           this._renderLoopPanel();
         });
-        this.loopModeEl.addEventListener('change', ()=>{
-          this._activeLoop().mode = this.loopModeEl.value;
+        this.loopRhythmLenEl.addEventListener('change', ()=>{ this.loopRhythmLen = this.loopRhythmLenEl.value; });
+        this.autoLoopApplyBtn.addEventListener('click', ()=>this._applyRhythmicLoopLength(1));
+        this.loopLenHalfBtn.addEventListener('click', ()=>this._applyRhythmicLoopLength(0.5));
+        this.loopLenDoubleBtn.addEventListener('click', ()=>this._applyRhythmicLoopLength(2));
+        this._bindDragNumeric(this.loopStartSamplesEl, { get:()=>Number(this.loopStartSamplesEl.value||0), set:(v)=>this._setLoopStartSamples(v), step:20 });
+        this._bindDragNumeric(this.loopEndSamplesEl,   { get:()=>Number(this.loopEndSamplesEl.value||0), set:(v)=>this._setLoopEndSamples(v), step:20 });
+        this._bindDragNumeric(this.xfadeSamplesEl,     { get:()=>Number(this.xfadeSamplesEl.value||0), set:(v)=>{ const L=this._activeLoop(); if(!L)return; L.xfadeMs=Math.max(0,v); }, step:0.5 });
+        this._bindDragNumeric(this.loopTuneEl,         { get:()=>Number(this.loopTuneEl.value||0), set:(v)=>{ const L=this._activeLoop(); if(!L)return; L.tune=v; }, step:0.5 });
+        this._bindDragNumeric(this.loopCountEl,        { get:()=>Number(this.loopCountEl.value||0), set:(v)=>{ const L=this._activeLoop(); if(!L)return; L.count=Math.max(0,Math.floor(v)); }, step:0.2 });
+        this.loopSlotPowerBtn.addEventListener('click', ()=>{
+          const L = this._activeLoop();
+          if(!L) return;
+          L.active = !L.active;
+          if(!L.active) this.activeSlot = this.loopSlots.findIndex(x=>x.active);
           this._renderLoopPanel();
+          this.needsRedraw = true;
+        });
+        this.loopGlobalPowerBtn.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          this.loopGlobalPower = !this.loopGlobalPower;
+          this.loopGlobalPowerBtn.setAttribute('aria-pressed', String(this.loopGlobalPower));
+          this.needsRedraw = true;
+        });
+        this.loopEditToggleBtn.addEventListener('click', ()=>{
+          this.loopEditView = !this.loopEditView;
+          this.loopEditToggleBtn.setAttribute('aria-pressed', String(this.loopEditView));
+          this.needsRedraw = true;
         });
 
         // Nudges
@@ -990,17 +1596,42 @@
         this.nudgeLoopEndMinus.addEventListener('click', ()=>this._nudgeLoop('end', -1));
         this.nudgeLoopEndPlus.addEventListener('click', ()=>this._nudgeLoop('end', +1));
 
-        // Tabs switch (placeholder)
+        // Tabs switch
         this.tabEls.forEach(t=>{
           t.addEventListener('click', ()=>{
             this.tabEls.forEach(x=>x.classList.remove('active'));
             t.classList.add('active');
             const which = t.dataset.tab;
+            this.currentTab = which;
             if(which==='loop'){
               this.panelLoop.style.display = '';
+              this.panelSync.style.display = 'none';
+              this.panelEnv.style.display = 'none';
+              this.panelEdit.style.display = 'none';
+              this.panelOther.style.display = 'none';
+            }else if(which==='sync'){
+              this.panelLoop.style.display = 'none';
+              this.panelSync.style.display = '';
+              this.panelEnv.style.display = 'none';
+              this.panelEdit.style.display = 'none';
+              this.panelOther.style.display = 'none';
+            }else if(which==='env'){
+              this.panelLoop.style.display = 'none';
+              this.panelSync.style.display = 'none';
+              this.panelEnv.style.display = '';
+              this.panelEdit.style.display = 'none';
+              this.panelOther.style.display = 'none';
+            }else if(which==='edit'){
+              this.panelLoop.style.display = 'none';
+              this.panelSync.style.display = 'none';
+              this.panelEnv.style.display = 'none';
+              this.panelEdit.style.display = '';
               this.panelOther.style.display = 'none';
             }else{
               this.panelLoop.style.display = 'none';
+              this.panelSync.style.display = 'none';
+              this.panelEnv.style.display = 'none';
+              this.panelEdit.style.display = 'none';
               this.panelOther.style.display = '';
               this.panelOther.innerHTML = `<div style="color:var(--muted); font-size:13px; line-height:1.35;">
                 <b>${t.textContent}</b> is a scaffold in this first build. Add features here in the next iteration.
@@ -1037,11 +1668,1231 @@
             e.preventDefault();
             this.play();
           }
+          if((e.key === 'Delete' || e.key === 'Backspace') && this.currentTab==='env'){
+            const env = this._visibleEnvelope();
+            if(env && this.selectedEnvPointIdx > 0 && this.selectedEnvPointIdx < env.points.length-1){
+              env.points.splice(this.selectedEnvPointIdx,1);
+              this.selectedEnvPointIdx = -1;
+              this.needsRedraw = true;
+            }
+          }
           if(e.code === 'Escape'){
             this.stop();
             this._closeAllMenus();
           }
         });
+      }
+
+
+      _bindDragNumeric(el, {get, set, step=1}){
+        el.readOnly = true;
+        let drag = null;
+        el.addEventListener('dblclick', ()=>{ el.readOnly = false; el.focus(); el.select?.(); });
+        el.addEventListener('blur', ()=>{ el.readOnly = true; });
+        el.addEventListener('pointerdown', (e)=>{
+          if(!el.readOnly || e.button!==0) return;
+          drag = { y:e.clientY, v:get() };
+          el.setPointerCapture?.(e.pointerId);
+          e.preventDefault();
+        });
+        el.addEventListener('pointermove', (e)=>{
+          if(!drag) return;
+          const dy = drag.y - e.clientY;
+          const v = drag.v + dy * step;
+          set(v);
+          this._renderLoopPanel();
+          this.needsRedraw = true;
+        });
+        el.addEventListener('pointerup', ()=>{ drag = null; });
+      }
+
+      _initSyncSliceUI(){
+        if(!this.kbGrid) return;
+        this.kbGrid.innerHTML = '';
+        for(let k=36;k<84;k++){
+          const d = document.createElement('div');
+          d.className = 'kbKey';
+          d.dataset.key = String(k);
+          const pc = k % 12;
+          if([1,3,6,8,10].includes(pc)) d.classList.add('black');
+          this.kbGrid.appendChild(d);
+        }
+
+        this.zoneLengthEl.addEventListener('change', ()=>{
+          const n = Number(this.zoneLengthEl.value);
+          if(Number.isFinite(n) && n>0) this.zoneLengthBeats = n;
+          this.zoneLengthEl.value = String(this.zoneLengthBeats);
+        });
+        this.beatSpeedModeEl.addEventListener('change', ()=>{ this.beatSpeedMode = this.beatSpeedModeEl.value; });
+        const syncBtnRefresh = ()=>{
+          this.useBeatmachineBtn.setAttribute('aria-pressed', String(this.syncMode==='beatmachine'));
+          this.useTimemachineBtn.setAttribute('aria-pressed', String(this.syncMode==='timemachine'));
+        };
+        this.useBeatmachineBtn.addEventListener('click', ()=>{
+          this.syncMode = (this.syncMode==='beatmachine') ? 'none' : 'beatmachine';
+          syncBtnRefresh();
+        });
+        this.useTimemachineBtn.addEventListener('click', ()=>{
+          this.syncMode = (this.syncMode==='timemachine') ? 'none' : 'timemachine';
+          syncBtnRefresh();
+        });
+        this.autoFindEmptyKeysBtn.setAttribute('aria-pressed','false');
+        this.autoFindEmptyKeysBtn.addEventListener('click', ()=>{
+          this.syncAutoFindEmpty = !this.syncAutoFindEmpty;
+          this.autoFindEmptyKeysBtn.setAttribute('aria-pressed', String(this.syncAutoFindEmpty));
+        });
+        this.dragMidiHostBtn.addEventListener('click', ()=>this._toast('Host drag-and-drop is not available in browser mode.'));
+        this.autoMapSlicesBtn.addEventListener('click', ()=>this._autoMapSlices());
+        this.loopSelectedSliceBtn.addEventListener('click', ()=>{
+          const idx = [...this.selectedSlices].sort((a,b)=>a-b)[0] ?? 0;
+          this._loopToSlice(idx, true);
+        });
+        this.loopOnSliceSelectBtn.addEventListener('click', ()=>this._togglePressed(this.loopOnSliceSelectBtn));
+        this.hitpointThresholdEl.addEventListener('input', ()=>{
+          const n = this._clamp(Number(this.hitpointThresholdEl.value), 0.02, 0.95);
+          this.hitpointThreshold = n;
+          this.gridThreshold = n;
+          this.gridThresholdEl.value = String(n);
+          this.hitpointThresholdPill.textContent = n.toFixed(2);
+          if(this.gridMode==='auto') this._rebuildGridMarkers();
+          this.needsRedraw = true;
+        });
+        this.hitpointThresholdPill.textContent = this.hitpointThreshold.toFixed(2);
+      }
+
+      _sliceRegions(){
+        const pts = [this.zoneStart, ...(this.gridMarkers||[]).map(m=>this._markerTime(m)).filter(t=>t>this.zoneStart && t<this.zoneEnd).sort((a,b)=>a-b), this.zoneEnd];
+        const out = [];
+        for(let i=0;i<pts.length-1;i++) if(pts[i+1]-pts[i] > (1/this.sampleRate)) out.push({idx:i, s:pts[i], e:pts[i+1]});
+        return out;
+      }
+
+      _sliceAtTime(t){
+        const slices = this._sliceRegions();
+        for(const s of slices) if(t>=s.s && t<s.e) return s.idx;
+        return -1;
+      }
+
+      _loopToSlice(idx, preview=false){
+        const slices = this._sliceRegions();
+        const s = slices.find(x=>x.idx===idx) || slices[0];
+        const L = this._activeLoop();
+        if(!s || !L) return;
+        L.start = this._clamp(s.s, this.zoneStart, this.zoneEnd - 1/this.sampleRate);
+        L.end = this._clamp(s.e, L.start + 1/this.sampleRate, this.zoneEnd);
+        L.active = true;
+        this._renderLoopPanel();
+        this._syncReadouts();
+        this.needsRedraw = true;
+        if(preview) this._prelistenLoop();
+      }
+
+      _selectSlicesByRange(tA, tB){
+        const lo=Math.min(tA,tB), hi=Math.max(tA,tB);
+        this.selectedSlices.clear();
+        this._sliceRegions().forEach(s=>{ if(s.s>=lo && s.e<=hi) this.selectedSlices.add(s.idx); });
+      }
+
+      _findEmptyStartKey(count, span=1){
+        const used = new Set();
+        this.mappedZones.forEach(z=>{ for(let k=z.key;k<z.key+z.span;k++) used.add(k); });
+        for(let k=24;k<=108-count*span;k++){
+          let ok=true;
+          for(let i=0;i<count*span;i++) if(used.has(k+i)){ ok=false; break; }
+          if(ok) return k;
+        }
+        return 24;
+      }
+
+      _mapSlicesToKey(startKey, sliceIdxs, span=1){
+        const slices = this._sliceRegions();
+        sliceIdxs.forEach((idx,i)=>{
+          const s = slices.find(x=>x.idx===idx);
+          if(!s) return;
+          this.mappedZones.push({ key:startKey + i*span, span, start:s.s, end:s.e, slice:idx });
+        });
+        this._renderKeyboardMappings();
+      }
+
+      _renderKeyboardMappings(){
+        this.kbGrid.querySelectorAll('.kbKey').forEach(k=>k.classList.remove('mapped'));
+        this.mappedZones.forEach(z=>{
+          for(let k=z.key;k<z.key+z.span;k++){
+            const el=this.kbGrid.querySelector(`.kbKey[data-key="${k}"]`);
+            if(el) el.classList.add('mapped');
+          }
+        });
+      }
+
+      _autoMapSlices(){
+        const slices = this._sliceRegions();
+        const idxs = slices.map(s=>s.idx);
+        const start = this.syncAutoFindEmpty ? this._findEmptyStartKey(idxs.length,1) : 24;
+        this._mapSlicesToKey(start, idxs, 1);
+      }
+
+      _mapSelectedToKeyboardFromPoint(clientX, clientY){
+        const el = document.elementFromPoint(clientX, clientY)?.closest('.kbKey');
+        if(!el) return;
+        const startKey = Number(el.dataset.key);
+        const rect = this.syncKeyboard.getBoundingClientRect();
+        const span = this._clamp(1 + Math.floor(((rect.bottom - clientY) / Math.max(1, rect.height)) * 3), 1, 4);
+        const idxs = [...this.selectedSlices].sort((a,b)=>a-b);
+        const base = this.syncAutoFindEmpty ? this._findEmptyStartKey(idxs.length, span) : startKey;
+        this._mapSlicesToKey(base, idxs, span);
+      }
+
+      _syncTargetDuration(){
+        const tempo = this.gridBpm || 120;
+        const beats = Math.max(0.25, this.zoneLengthBeats || 4);
+        if(this.beatSpeedMode==='1/4') return beats * (60/tempo);
+        if(this.beatSpeedMode==='1/8') return beats * 0.5 * (60/tempo);
+        return beats * (60/tempo);
+      }
+
+      _playTimemachine(){
+        if(!this.buffer) return;
+        const start = this.zoneStart, end = this.zoneEnd;
+        const src = this.audioCtx.createBufferSource();
+        src.buffer = this.buffer;
+        const zoneDur = Math.max(0.001, end-start);
+        const target = Math.max(0.001, this._syncTargetDuration());
+        src.playbackRate.value = zoneDur / target;
+        this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, start, zoneDur, src.playbackRate.value);
+        src.start(0, start, zoneDur);
+        this.source = src;
+      }
+
+      _playBeatmachine(){
+        const slices = this._sliceRegions();
+        if(!slices.length) return;
+        this._beatPlaying = true;
+        this._beatIdx = 0;
+        const tick = ()=>{
+          if(!this._beatPlaying) return;
+          const dynamicSlices = this._sliceRegions();
+          if(!dynamicSlices.length) return;
+          const s = dynamicSlices[this._beatIdx % dynamicSlices.length];
+          const src = this.audioCtx.createBufferSource();
+          src.buffer = this.buffer;
+          const sliceDur = Math.max(0.001, s.e - s.s);
+          const targetPerSlice = Math.max(0.001, this._syncTargetDuration() / dynamicSlices.length);
+          src.playbackRate.value = sliceDur / targetPerSlice;
+          this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, s.s, sliceDur, src.playbackRate.value);
+          src.start(0, s.s, sliceDur);
+          this.source = src;
+          this._beatIdx++;
+          this._beatTimer = setTimeout(tick, targetPerSlice * 1000);
+        };
+        tick();
+      }
+
+
+      _initPerformancePadsUI(){
+        if(!this.perfPadsGrid) return;
+        this.perfPadsGrid.innerHTML = '';
+        for(let i=0;i<8;i++){
+          const b = document.createElement('button');
+          b.className = 'perfPad';
+          b.dataset.pad = String(i);
+          b.addEventListener('click', ()=>this._triggerPerformancePad(i));
+          this.perfPadsGrid.appendChild(b);
+        }
+
+        const setMode = (m)=>{ this.perfPadMode = m; this._refreshPerformancePads(); };
+        this.ppModeSamplerBtn.addEventListener('click', ()=>setMode('sampler'));
+        this.ppModeKeyboardBtn.addEventListener('click', ()=>setMode('keyboard'));
+        this.ppModeBeatJumpBtn.addEventListener('click', ()=>setMode('beatjump'));
+        this.ppModeEffectsBtn.addEventListener('click', ()=>setMode('effects'));
+        this.ppShiftBtn.addEventListener('click', ()=>{ this.perfPadShift = !this.perfPadShift; this._refreshPerformancePads(); });
+
+        this.ppParamMinusBtn.addEventListener('click', ()=>{
+          if(this.perfPadMode==='beatjump') this.perfPadBeatLoopBank = Math.max(0, this.perfPadBeatLoopBank-1);
+          else if(this.perfPadMode==='keyboard') this.perfPadKeyShiftBase -= 8;
+          else this.perfPadParamOffset = Math.max(0, this.perfPadParamOffset - 8);
+          this._refreshPerformancePads();
+        });
+        this.ppParamPlusBtn.addEventListener('click', ()=>{
+          if(this.perfPadMode==='beatjump') this.perfPadBeatLoopBank = Math.min(1, this.perfPadBeatLoopBank+1);
+          else if(this.perfPadMode==='keyboard') this.perfPadKeyShiftBase += 8;
+          else this.perfPadParamOffset += 8;
+          this._refreshPerformancePads();
+        });
+
+        this.ppFxSelectEl.addEventListener('change', ()=>{ this.perfPadFxSelected = this.ppFxSelectEl.value; });
+        this.ppFxAssignBtn.addEventListener('click', ()=>{
+          const idx = this.perfPadHotCue;
+          this.perfPadFxByPad[idx] = this.perfPadFxSelected;
+          this._refreshPerformancePads();
+        });
+        this.ppFxClearBtn.addEventListener('click', ()=>{
+          const idx = this.perfPadHotCue;
+          this.perfPadFxByPad[idx] = 'none';
+          this._refreshPerformancePads();
+        });
+
+        const bindChain = (btn, key)=>btn.addEventListener('click', ()=>{ this.perfPadChain[key] = !this.perfPadChain[key]; this._refreshPerformancePads(); });
+        bindChain(this.ppChainEchoBtn, 'echo');
+        bindChain(this.ppChainFlangerBtn, 'flanger');
+        bindChain(this.ppChainPhaserBtn, 'phaser');
+        bindChain(this.ppChainReverbBtn, 'reverb');
+
+        this.ppFxSelectEl.value = this.perfPadFxSelected;
+        this._refreshPerformancePads();
+      }
+
+      _refreshPerformancePads(){
+        if(!this.perfPadsGrid) return;
+        const mode = this.perfPadMode;
+        this.ppModeSamplerBtn.setAttribute('aria-pressed', String(mode==='sampler'));
+        this.ppModeKeyboardBtn.setAttribute('aria-pressed', String(mode==='keyboard'));
+        this.ppModeBeatJumpBtn.setAttribute('aria-pressed', String(mode==='beatjump'));
+        this.ppModeEffectsBtn.setAttribute('aria-pressed', String(mode==='effects'));
+        this.ppShiftBtn.setAttribute('aria-pressed', String(this.perfPadShift));
+
+        this.ppChainEchoBtn.setAttribute('aria-pressed', String(!!this.perfPadChain.echo));
+        this.ppChainFlangerBtn.setAttribute('aria-pressed', String(!!this.perfPadChain.flanger));
+        this.ppChainPhaserBtn.setAttribute('aria-pressed', String(!!this.perfPadChain.phaser));
+        this.ppChainReverbBtn.setAttribute('aria-pressed', String(!!this.perfPadChain.reverb));
+
+        const beatLabels = ['1/64','1/32','1/16','1/8','1/4','1/2','1','2'];
+        Array.from(this.perfPadsGrid.children).forEach((el,i)=>{
+          const target = this.perfPadParamOffset + i;
+          const assigned = this.perfPadFxByPad[target] || 'none';
+          let text = `Pad ${i+1} · S${target+1}${assigned!=='none' ? ` [${assigned.toUpperCase()}]` : ''}`;
+          if(mode==='effects') text = ['ECHO','BACK SPIN','FLANGER','REVERB','VINYL BRAKE','PHASER','FX G','FX H'][i];
+          if(mode==='beatjump') text = this.perfPadBeatLoopBank===0 ? `${beatLabels[i]} beat${i<6?'':'s'}` : `${Math.max(1,2**(i-3))} bar${(i-3)<=0?'':'s'}`;
+          if(mode==='keyboard') text = `${(this.perfPadKeyShiftBase + i)>=0?'+':''}${this.perfPadKeyShiftBase + i} st`;
+          el.textContent = text;
+          el.classList.toggle('hot', target===this.perfPadHotCue || (mode==='beatjump' && i===this.perfPadBeatLoopActivePad));
+        });
+
+        if(mode==='beatjump') this.perfPadsHint.textContent = `Beat Loop bank: ${this.perfPadBeatLoopBank===0 ? 'beats' : 'bars'} · press same pad to cancel.`;
+        else if(mode==='keyboard') this.perfPadsHint.textContent = `Key Shift base: ${this.perfPadKeyShiftBase>=0?'+':''}${this.perfPadKeyShiftBase} semitones.`;
+        else this.perfPadsHint.textContent = `Mode: ${mode}${this.perfPadShift ? ' (shift)' : ''} · offset ${this.perfPadParamOffset} · hot cue ${this.perfPadHotCue+1}`;
+      }
+
+      _selectedPadFxList(padIdx){
+        const chain = [];
+        const assigned = this.perfPadFxByPad[padIdx] || 'none';
+        if(assigned !== 'none') chain.push(assigned);
+        for(const k of ['echo','flanger','phaser','reverb']) if(this.perfPadChain[k] && !chain.includes(k)) chain.push(k);
+        return chain;
+      }
+
+      _buildReverbIR(){
+        if(!this.audioCtx || this.fxReverbIR) return this.fxReverbIR;
+        const len = Math.floor(this.audioCtx.sampleRate * 1.2);
+        const ir = this.audioCtx.createBuffer(2, len, this.audioCtx.sampleRate);
+        for(let c=0;c<2;c++){
+          const d = ir.getChannelData(c);
+          for(let i=0;i<len;i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/len, 2.4);
+        }
+        this.fxReverbIR = ir;
+        return ir;
+      }
+
+      _applyPadFxChain(inputNode, fxList, when, duration){
+        if(!fxList?.length){ inputNode.connect(this.masterGain); return; }
+        let current = inputNode;
+        for(const fx of fxList){
+          if(fx==='echo'){
+            const dry = this.audioCtx.createGain(); dry.gain.value = 0.78;
+            const wet = this.audioCtx.createGain(); wet.gain.value = 0.38;
+            const out = this.audioCtx.createGain();
+            const d = this.audioCtx.createDelay(0.8); d.delayTime.value = Math.min(0.45, Math.max(0.08, duration*0.35));
+            const fb = this.audioCtx.createGain(); fb.gain.value = 0.34;
+            current.connect(dry); dry.connect(out);
+            current.connect(d); d.connect(fb); fb.connect(d); d.connect(wet); wet.connect(out);
+            current = out;
+          }else if(fx==='flanger'){
+            const out = this.audioCtx.createGain();
+            const d = this.audioCtx.createDelay(0.03); d.delayTime.value = 0.005;
+            const wet = this.audioCtx.createGain(); wet.gain.value = 0.5;
+            const dry = this.audioCtx.createGain(); dry.gain.value = 0.75;
+            const lfo = this.audioCtx.createOscillator(); lfo.frequency.value = 0.23;
+            const lfoG = this.audioCtx.createGain(); lfoG.gain.value = 0.003;
+            lfo.connect(lfoG); lfoG.connect(d.delayTime);
+            lfo.start(when); lfo.stop(when + duration + 0.2);
+            current.connect(dry); dry.connect(out);
+            current.connect(d); d.connect(wet); wet.connect(out);
+            current = out;
+          }else if(fx==='phaser'){
+            const a1 = this.audioCtx.createBiquadFilter(); a1.type='allpass'; a1.frequency.value = 700;
+            const a2 = this.audioCtx.createBiquadFilter(); a2.type='allpass'; a2.frequency.value = 1500;
+            const lfo = this.audioCtx.createOscillator(); lfo.frequency.value = 0.17;
+            const g = this.audioCtx.createGain(); g.gain.value = 500;
+            lfo.connect(g); g.connect(a1.frequency); g.connect(a2.frequency);
+            lfo.start(when); lfo.stop(when + duration + 0.2);
+            current.connect(a1); a1.connect(a2); current = a2;
+          }else if(fx==='reverb'){
+            const out = this.audioCtx.createGain();
+            const dry = this.audioCtx.createGain(); dry.gain.value = 0.7;
+            const wet = this.audioCtx.createGain(); wet.gain.value = 0.45;
+            const conv = this.audioCtx.createConvolver(); conv.buffer = this._buildReverbIR();
+            current.connect(dry); dry.connect(out);
+            current.connect(conv); conv.connect(wet); wet.connect(out);
+            current = out;
+          }
+        }
+        current.connect(this.masterGain);
+      }
+
+      _playSliceWithPadFx(sliceIdx, padIdx, semitoneShift=0){
+        if(!this.buffer) return;
+        const slices = this._sliceRegions();
+        const s = slices.find(x=>x.idx===sliceIdx) || slices[0];
+        if(!s) return;
+        const start = this._clamp(s.s, this.zoneStart, this.zoneEnd);
+        const end = this._clamp(s.e, start + 1/this.sampleRate, this.zoneEnd);
+        const fxList = this._selectedPadFxList(padIdx);
+
+        this.stop();
+        const src = this.audioCtx.createBufferSource();
+        src.buffer = this.buffer;
+        src.playbackRate.value = Math.pow(2, semitoneShift/12);
+        this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, start, end-start, src.playbackRate.value, null, fxList);
+        try{ src.start(0, start, end-start); }catch(e){ console.warn(e); }
+        src.onended = ()=>{ if(this.source === src) this.source = null; };
+        this.source = src;
+      }
+
+      _triggerPerformancePad(localIdx){
+        const idx = this.perfPadParamOffset + localIdx;
+        const slices = this._sliceRegions();
+        if(!slices.length){ this._toast('No slices/hitpoints available.'); return; }
+        const clamped = this._clamp(idx, 0, slices.length-1);
+
+        if(this.perfPadMode==='effects'){
+          if(this.perfPadShift){
+            this.perfPadFxByPad[clamped] = 'none';
+            this._toast(`Cleared FX assignment for pad ${clamped+1}.`);
+          }else{
+            this.perfPadFxByPad[clamped] = this.perfPadFxSelected;
+            this.perfPadHotCue = clamped;
+            this._toast(`Assigned ${this.perfPadFxSelected.toUpperCase()} to pad ${clamped+1}.`);
+          }
+          this._refreshPerformancePads();
+          return;
+        }
+
+        if(this.perfPadMode==='sampler'){
+          if(this.perfPadShift){ this.perfPadHotCue = clamped; this._refreshPerformancePads(); return; }
+          this._playSliceWithPadFx(clamped, clamped, 0);
+          return;
+        }
+
+        if(this.perfPadMode==='keyboard'){
+          const target = this.perfPadShift ? this.perfPadHotCue : clamped;
+          const semitone = this.perfPadKeyShiftBase + localIdx;
+          this.perfPadHotCue = target;
+          this._playSliceWithPadFx(target, target, semitone);
+          this._refreshPerformancePads();
+          return;
+        }
+
+        if(this.perfPadMode==='beatjump'){
+          const L = this._activeLoop();
+          if(!L) return;
+          const beatsTable = [1/64,1/32,1/16,1/8,1/4,1/2,1,2];
+          const barsTable = [1/8,1/4,1/2,1,2,4,8,16];
+          const beats = this.perfPadBeatLoopBank===0 ? beatsTable[localIdx] : barsTable[localIdx] * Number((this.gridSig || '4/4').split('/')[0] || 4);
+          const dur = beats * (60 / Math.max(20, this.gridBpm || 120));
+          if(this.perfPadBeatLoopActivePad===localIdx){
+            this.perfPadBeatLoopActivePad = -1;
+            this._toast('Beat Loop canceled.');
+            this._refreshPerformancePads();
+            return;
+          }
+          L.end = this._clamp(L.start + dur, L.start + 1/this.sampleRate, this.zoneEnd);
+          this.perfPadBeatLoopActivePad = localIdx;
+          this._renderLoopPanel();
+          this._prelistenLoop();
+          this._refreshPerformancePads();
+          return;
+        }
+      }
+
+      _initZoneEnvelopesUI(){
+        const mkTarget = (id, name)=>({id, name});
+
+        this.envAssignVolBtn.addEventListener('click', ()=>this._createOrSelectEnvelope('volume', 'Volume'));
+        this.envAssignPanBtn.addEventListener('click', ()=>this._createOrSelectEnvelope('pan', 'Pan'));
+        this.envAssignAddBtn.addEventListener('click', ()=>{
+          const t = this.zone.pendingTarget;
+          if(!t) return;
+          this._createOrSelectEnvelope(t.id, t.name);
+        });
+        this.envVisibleEl.addEventListener('change', ()=>{
+          this.zone.visibleEnvelopeId = this.envVisibleEl.value || null;
+          this.selectedEnvPointIdx = -1;
+          this._syncEnvAssignControls();
+          this.needsRedraw = true;
+        });
+        this.envDeleteBtn.addEventListener('click', ()=>{
+          const env = this._visibleEnvelope();
+          if(!env) return;
+          this.zone.envelopes = this.zone.envelopes.filter(e=>e.id!==env.id);
+          this.zone.visibleEnvelopeId = this.zone.envelopes[0]?.id ?? null;
+          this.selectedEnvPointIdx = -1;
+          this._refreshEnvelopeDropdown();
+          this._syncEnvAssignControls();
+          this.needsRedraw = true;
+        });
+
+        this.envDepthEl.addEventListener('input', ()=>{ const e=this._visibleEnvelope(); if(!e) return; e.depth=Number(this.envDepthEl.value); this.needsRedraw=true; });
+        this.envInvertBtn.addEventListener('click', ()=>{ const e=this._visibleEnvelope(); if(!e) return; e.invert=!e.invert; this.envInvertBtn.setAttribute('aria-pressed',String(e.invert)); this.needsRedraw=true; });
+        this.envLagEl.addEventListener('change', ()=>{ const e=this._visibleEnvelope(); if(!e) return; const n=Number(this.envLagEl.value); if(Number.isFinite(n)) e.lag=Math.max(0,n); this._syncEnvAssignControls(); });
+        this.envQuickJumpBtn.addEventListener('click', ()=>{ this.envAssignPanel.scrollIntoView({behavior:'smooth', block:'nearest'}); this._toast('Focused envelope assignment controls.'); });
+
+        window.addEventListener('pointerdown', (e)=>{
+          if(this.currentTab!=='env') return;
+          const t = e.target.closest('.num, .select, .miniToggle, .btn');
+          if(!t) return;
+          if(t.closest('#panelEnv')) return;
+          const id = t.id || ('param-' + (t.textContent||'param').trim().toLowerCase().replace(/\s+/g,'-'));
+          const name = t.title || (t.textContent||id).trim();
+          this.zone.pendingTarget = mkTarget(id,name);
+          this.envPendingEl.textContent = `Add: ${name}`;
+        }, true);
+
+        this._refreshEnvelopeDropdown();
+        this._syncEnvAssignControls();
+      }
+
+      _createOrSelectEnvelope(targetParamId, targetName){
+        let env = this.zone.envelopes.find(e=>e.targetParamId===targetParamId);
+        if(!env){
+          env = {
+            id: 'env-' + Math.random().toString(36).slice(2,9),
+            targetParamId,
+            targetName,
+            points:[{t:0,v:0.5},{t:1,v:0.5}],
+            locked:false,
+            loopEnabled:false,
+            loopStartT:0,
+            loopEndT:1,
+            followPlaybackSpeed:true,
+            depth:1,
+            invert:false,
+            lag:0
+          };
+          this.zone.envelopes.push(env);
+        }
+        this.zone.visibleEnvelopeId = env.id;
+        this._refreshEnvelopeDropdown();
+        this._syncEnvAssignControls();
+        this.needsRedraw = true;
+      }
+
+      _visibleEnvelope(){
+        if(!this.zone.visibleEnvelopeId) return null;
+        return this.zone.envelopes.find(e=>e.id===this.zone.visibleEnvelopeId) || null;
+      }
+
+      _refreshEnvelopeDropdown(){
+        this.envVisibleEl.innerHTML = '';
+        this.zone.envelopes.forEach(e=>{
+          const o = document.createElement('option');
+          o.value = e.id;
+          o.textContent = e.targetName;
+          this.envVisibleEl.appendChild(o);
+        });
+        if(this.zone.visibleEnvelopeId){
+          this.envVisibleEl.value = this.zone.visibleEnvelopeId;
+        }
+      }
+
+      _syncEnvAssignControls(){
+        const env = this._visibleEnvelope();
+        const on = !!env;
+        [this.envDeleteBtn,this.envDepthEl,this.envInvertBtn,this.envLagEl,this.envQuickJumpBtn].forEach(el=>el.disabled=!on);
+        if(env){
+          this.envDepthEl.value = String(env.depth ?? 1);
+          this.envInvertBtn.setAttribute('aria-pressed', String(!!env.invert));
+          this.envLagEl.value = String(env.lag ?? 0);
+        }
+        this.envPendingEl.textContent = `Add: ${this.zone.pendingTarget?.name || 'none'}`;
+      }
+
+      _envSnapTime(t){
+        return this._clamp(this._snapToGridMarkerIfNeeded(t), this.zoneStart, this.zoneEnd);
+      }
+
+      _envValueToY(v, y, h){ return y + (1-v) * h; }
+      _yToEnvValue(py, y, h){ return this._clamp(1 - ((py-y)/h), 0, 1); }
+
+      _applyEnvelopesForSource(src, chainIn, when, startOffset, playDur, playbackRate=1, outputNode=null, fxList=null){
+        const finalOut = outputNode || this.masterGain;
+        const envs = this.zone.envelopes;
+        if(!envs.length){
+          if(fxList?.length) this._applyPadFxChain(chainIn, fxList, when, playDur);
+          else chainIn.connect(finalOut);
+          return chainIn;
+        }
+
+        const gainNode = this.audioCtx.createGain();
+        gainNode.gain.value = 1;
+        const panNode = this.audioCtx.createStereoPanner ? this.audioCtx.createStereoPanner() : null;
+        if(panNode) panNode.pan.value = 0;
+
+        chainIn.connect(gainNode);
+        if(panNode){
+          gainNode.connect(panNode);
+          if(fxList?.length) this._applyPadFxChain(panNode, fxList, when, playDur);
+          else panNode.connect(finalOut);
+        }
+        else{
+          if(fxList?.length) this._applyPadFxChain(gainNode, fxList, when, playDur);
+          else gainNode.connect(finalOut);
+        }
+
+        const zoneDur = Math.max(0.001, this.zoneEnd - this.zoneStart);
+        for(const env of envs){
+          if(!env.points?.length) continue;
+          const pts = [...env.points].sort((a,b)=>a.t-b.t);
+          const curveLen = 128;
+          const curve = new Float32Array(curveLen);
+          for(let i=0;i<curveLen;i++){
+            const x = i/(curveLen-1);
+            let a = pts[0], b = pts[pts.length-1];
+            for(let j=0;j<pts.length-1;j++) if(x>=pts[j].t && x<=pts[j+1].t){ a=pts[j]; b=pts[j+1]; break; }
+            const u = (b.t===a.t)?0:(x-a.t)/(b.t-a.t);
+            let val = a.v + (b.v-a.v)*u;
+            if(env.invert) val = 1-val;
+            curve[i] = this._clamp(val,0,1);
+          }
+
+          const relStart = this._clamp((startOffset - this.zoneStart)/zoneDur,0,1);
+          const relEnd = this._clamp((startOffset + playDur - this.zoneStart)/zoneDur,relStart,1);
+          const segLen = Math.max(4, Math.floor(curveLen * Math.max(0.01, relEnd-relStart)));
+          const seg = new Float32Array(segLen);
+          for(let i=0;i<segLen;i++) seg[i] = curve[Math.floor(relStart*(curveLen-1) + i*(relEnd-relStart)*(curveLen-1)/Math.max(1,segLen-1))];
+          const lagN = Math.floor((env.lag ?? 0) * 8);
+          if(lagN > 0){
+            for(let i=1;i<segLen;i++){
+              seg[i] = (seg[i] + seg[Math.max(0,i-lagN)]) * 0.5;
+            }
+          }
+
+          const scaledDur = env.followPlaybackSpeed ? (playDur / Math.max(0.001, playbackRate)) : playDur;
+          if(env.targetParamId==='volume'){
+            const depth = env.depth ?? 1;
+            const mapped = new Float32Array(segLen);
+            for(let i=0;i<segLen;i++) mapped[i] = this._clamp(1 + depth * (seg[i]-0.5)*2, 0, 2);
+            gainNode.gain.setValueCurveAtTime(mapped, when, Math.max(0.001, scaledDur));
+          }else if(env.targetParamId==='pan' && panNode){
+            const depth = env.depth ?? 1;
+            const mapped = new Float32Array(segLen);
+            for(let i=0;i<segLen;i++) mapped[i] = this._clamp(depth * ((seg[i]-0.5)*2), -1, 1);
+            panNode.pan.setValueCurveAtTime(mapped, when, Math.max(0.001, scaledDur));
+          }
+        }
+        return panNode || gainNode;
+      }
+
+      _initSampleEditorUI(){
+        const bindNum = (el, get, set, step)=>this._bindDragNumeric(el,{get,set,step});
+        const onNum = (el, fn)=>el.addEventListener('change', ()=>{ const n=Number(el.value); if(Number.isFinite(n)) fn(n); });
+
+        this.seCutBtn.addEventListener('click', ()=>this._seCut());
+        this.seCopyBtn.addEventListener('click', ()=>this._seCopy());
+        this.sePasteBtn.addEventListener('click', ()=>this._sePaste());
+        this.seCropBtn.addEventListener('click', ()=>this._seCrop());
+        this.seDeleteBtn.addEventListener('click', ()=>this._seDelete());
+        this.seDuplicateBtn.addEventListener('click', ()=>this._seDuplicate());
+        this.seFadeInBtn.addEventListener('click', ()=>this._seFadeIn());
+        this.seFadeOutBtn.addEventListener('click', ()=>this._seFadeOut());
+        this.seSilenceBtn.addEventListener('click', ()=>this._seSilence());
+        this.seReverseBtn.addEventListener('click', ()=>this._seReverse());
+        this.seNormalizeBtn.addEventListener('click', ()=>this._seNormalize());
+        this.seDcRemBtn.addEventListener('click', ()=>this._seDcRem());
+        this.seUndoBtn.addEventListener('click', ()=>this._seUndoOp());
+        this.seRedoBtn.addEventListener('click', ()=>this._seRedoOp());
+        this.seRestoreBtn.addEventListener('click', ()=>this._seRestoreOrig());
+        this.seAutoPrelistenBtn.addEventListener('click', ()=>this._togglePressed(this.seAutoPrelistenBtn));
+
+        onNum(this.seSelStartEl, (n)=>{ if(!this.buffer) return; const s=this._clamp(n/this.sampleRate, this.zoneStart, this.zoneEnd); const e=this.editSel?.e ?? s; this.editSel={s:Math.min(s,e), e:Math.max(s,e)}; this._syncSampleSelectionFields(); this.needsRedraw=true; });
+        onNum(this.seSelEndEl, (n)=>{ if(!this.buffer) return; const e=this._clamp(n/this.sampleRate, this.zoneStart, this.zoneEnd); const s=this.editSel?.s ?? e; this.editSel={s:Math.min(s,e), e:Math.max(s,e)}; this._syncSampleSelectionFields(); this.needsRedraw=true; });
+        onNum(this.seSelLenEl, (n)=>{ if(!this.buffer || !this.editSel) return; const len=Math.max(1,Math.floor(n))/this.sampleRate; this.editSel.e=this._clamp(this.editSel.s+len,this.editSel.s,this.zoneEnd); this._syncSampleSelectionFields(); this.needsRedraw=true; });
+
+        bindNum(this.seSelStartEl, ()=>Number(this.seSelStartEl.value||0), (v)=>{ const s=this._clamp(v/this.sampleRate,this.zoneStart,this.zoneEnd); const e=this.editSel?.e ?? s; this.editSel={s:Math.min(s,e), e:Math.max(s,e)}; this._syncSampleSelectionFields(); }, 20);
+        bindNum(this.seSelEndEl, ()=>Number(this.seSelEndEl.value||0), (v)=>{ const e=this._clamp(v/this.sampleRate,this.zoneStart,this.zoneEnd); const s=this.editSel?.s ?? e; this.editSel={s:Math.min(s,e), e:Math.max(s,e)}; this._syncSampleSelectionFields(); }, 20);
+        bindNum(this.seSelLenEl, ()=>Number(this.seSelLenEl.value||0), (v)=>{ if(!this.editSel) return; const len=Math.max(1,v)/this.sampleRate; this.editSel.e=this._clamp(this.editSel.s+len,this.editSel.s,this.zoneEnd); this._syncSampleSelectionFields(); }, 20);
+      }
+
+      _isEditTabActive(){ return this.currentTab === 'edit'; }
+
+      _ensureWorkingChannels(){
+        if(!this.buffer) return;
+        if(!this.workingChannels){
+          this.workingChannels = [];
+          for(let c=0;c<this.buffer.numberOfChannels;c++) this.workingChannels.push(new Float32Array(this.buffer.getChannelData(c)));
+          this.originalWorking = this.workingChannels.map(ch=>new Float32Array(ch));
+        }
+      }
+
+      _rebuildBufferFromWorking(){
+        if(!this.workingChannels?.length) return;
+        const chCount = this.workingChannels.length;
+        const len = this.workingChannels[0].length;
+        const b = this.audioCtx.createBuffer(chCount, len, this.sampleRate);
+        for(let c=0;c<chCount;c++) b.getChannelData(c).set(this.workingChannels[c]);
+        this.buffer = b;
+        const mono = new Float32Array(len);
+        for(let i=0;i<len;i++){
+          let acc = 0;
+          for(let c=0;c<chCount;c++) acc += this.workingChannels[c][i];
+          mono[i] = acc / chCount;
+        }
+        this.mono = mono;
+        this.zoneStart = 0;
+        this.zoneEnd = len / this.sampleRate;
+        this.viewEnd = Math.min(this.viewEnd, this.zoneEnd);
+        this._syncReadouts();
+      }
+
+      _seSnapshot(){
+        return {
+          channels: this.workingChannels.map(ch=>new Float32Array(ch)),
+          zoneEnd: this.zoneEnd,
+          loopSlots: this.loopSlots.map(l=>({...l})),
+          gridMarkers: (this.gridMarkers||[]).map(m=>typeof m==='number'?m:{...m}),
+          envelopes: this.zone.envelopes.map(e=>({...e, points:e.points.map(p=>({...p}))})),
+          sel: this.editSel ? {...this.editSel} : null,
+          cursor: this.editCursorT
+        };
+      }
+      _seRestoreSnapshot(snap){
+        this.workingChannels = snap.channels.map(ch=>new Float32Array(ch));
+        this.loopSlots = snap.loopSlots.map(l=>({...l}));
+        this.gridMarkers = snap.gridMarkers.map(m=>typeof m==='number'?m:{...m});
+        this.zone.envelopes = snap.envelopes.map(e=>({...e, points:e.points.map(p=>({...p}))}));
+        this.editSel = snap.sel ? {...snap.sel} : null;
+        this.editCursorT = snap.cursor;
+        this._rebuildBufferFromWorking();
+        this._renderLoopPanel();
+        this._refreshEnvelopeDropdown();
+        this._syncEnvAssignControls();
+        this._syncSampleSelectionFields();
+        this.needsRedraw = true;
+      }
+      _sePushUndo(){
+        this._ensureWorkingChannels();
+        this.editUndo.push(this._seSnapshot());
+        if(this.editUndo.length>60) this.editUndo.shift();
+        this.editRedo = [];
+      }
+
+      _sampleSelRange(){
+        if(!this.editSel) return null;
+        const s = this._clamp(this.editSel.s, this.zoneStart, this.zoneEnd);
+        const e = this._clamp(this.editSel.e, this.zoneStart, this.zoneEnd);
+        if(e <= s) return null;
+        return {s,e, i0:Math.floor(s*this.sampleRate), i1:Math.floor(e*this.sampleRate)};
+      }
+
+      _syncSampleSelectionFields(){
+        const r = this._sampleSelRange();
+        if(!r){
+          this.seSelStartEl.value = '0'; this.seSelEndEl.value = '0'; this.seSelLenEl.value='0';
+          return;
+        }
+        this.seSelStartEl.value = String(r.i0);
+        this.seSelEndEl.value = String(r.i1);
+        this.seSelLenEl.value = String(Math.max(0, r.i1-r.i0));
+        if(this._isPressed(this.seAutoPrelistenBtn)) this._playSelectionPrelisten();
+      }
+
+      async _playSelectionPrelisten(){
+        const r = this._sampleSelRange();
+        if(!r || !this.buffer) return;
+        await this._ensureAudio();
+        this.stop();
+        const src = this.audioCtx.createBufferSource();
+        src.buffer = this.buffer;
+        this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, r.s, r.e-r.s, 1);
+        src.start(0, r.s, Math.max(1/this.sampleRate, r.e-r.s));
+        this.source = src;
+      }
+
+      _seCopy(){
+        this._ensureWorkingChannels();
+        const r = this._sampleSelRange();
+        if(!r) return;
+        this.editClipboard = { sampleRate:this.sampleRate, channels:this.workingChannels.map(ch=>ch.slice(r.i0,r.i1)) };
+      }
+
+      _seApplyLengthChange(i0, i1, newLen){
+        const oldLen = Math.max(0,i1-i0);
+        const delta = (newLen - oldLen) / this.sampleRate;
+        const t0 = i0 / this.sampleRate;
+        const t1 = i1 / this.sampleRate;
+        for(const L of this.loopSlots){
+          if(L.start >= t1) L.start += delta; else if(L.start > t0) L.start = t0;
+          if(L.end >= t1) L.end += delta; else if(L.end > t0) L.end = Math.max(L.start + 1/this.sampleRate, t0);
+          L.start = this._clamp(L.start, this.zoneStart, this.zoneEnd + delta);
+          L.end = this._clamp(L.end, L.start + 1/this.sampleRate, this.zoneEnd + delta);
+        }
+        const upd = (t)=>{ if(t>=t1) return t+delta; if(t>t0) return t0; return t; };
+        this.gridMarkers = (this.gridMarkers||[]).map(m=>{
+          if(typeof m==='number') return upd(m);
+          return {...m, timeSec:upd(this._markerTime(m))};
+        }).filter(m=>this._markerTime(m)>=0);
+        for(const env of this.zone.envelopes){
+          const zDurOld = Math.max(0.0001, this.zoneEnd-this.zoneStart);
+          const zDurNew = Math.max(0.0001, zDurOld + delta);
+          env.points = env.points.map(p=>{
+            const abs = this.zoneStart + p.t * zDurOld;
+            const nabs = upd(abs);
+            return {t:this._clamp((nabs-this.zoneStart)/zDurNew,0,1), v:p.v};
+          }).filter((p,i,a)=> i===0 || p.t>a[i-1].t || i===a.length-1);
+        }
+      }
+
+      _seReplaceRange(i0,i1, insertChannels){
+        const out=[];
+        for(let c=0;c<this.workingChannels.length;c++){
+          const a=this.workingChannels[c];
+          const ins=(insertChannels && insertChannels[c]) ? insertChannels[c] : new Float32Array(0);
+          const n=new Float32Array(a.length - (i1-i0) + ins.length);
+          n.set(a.subarray(0,i0),0);
+          n.set(ins,i0);
+          n.set(a.subarray(i1), i0+ins.length);
+          out.push(n);
+        }
+        this.workingChannels=out;
+        this._seApplyLengthChange(i0,i1, insertChannels?insertChannels[0].length:0);
+        this._rebuildBufferFromWorking();
+      }
+
+      _seCut(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); this._seCopy(); this._seReplaceRange(r.i0,r.i1,null); this.editSel=null; this.editCursorT=r.s; this._syncSampleSelectionFields(); this.needsRedraw=true; }
+      _seDelete(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); this._seReplaceRange(r.i0,r.i1,null); this.editSel=null; this.editCursorT=r.s; this._syncSampleSelectionFields(); this.needsRedraw=true; }
+      _sePaste(){ this._ensureWorkingChannels(); if(!this.editClipboard) return; this._sePushUndo(); const r=this._sampleSelRange(); const i0=r?r.i0:Math.floor(this.editCursorT*this.sampleRate); const i1=r?r.i1:i0; this._seReplaceRange(i0,i1,this.editClipboard.channels.map(ch=>new Float32Array(ch))); this.editSel={s:i0/this.sampleRate,e:(i0+this.editClipboard.channels[0].length)/this.sampleRate}; this._syncSampleSelectionFields(); this.needsRedraw=true; }
+      _seCrop(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); this._seReplaceRange(r.i1, this.workingChannels[0].length, null); this._seReplaceRange(0, r.i0, null); this.editSel={s:0,e:(r.i1-r.i0)/this.sampleRate}; this.editCursorT=0; this._syncSampleSelectionFields(); this.needsRedraw=true; }
+      _seDuplicate(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); const clips=this.workingChannels.map(ch=>ch.slice(r.i0,r.i1)); this._seReplaceRange(r.i1,r.i1,clips); this.editSel={s:r.s,e:r.e+(r.e-r.s)}; this._syncSampleSelectionFields(); this.needsRedraw=true; }
+      _seFadeIn(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); for(const ch of this.workingChannels){ const L=Math.max(1,r.i1-r.i0); for(let i=0;i<L;i++) ch[r.i0+i]*=(i/(L-1)); } this._rebuildBufferFromWorking(); this.needsRedraw=true; }
+      _seFadeOut(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); for(const ch of this.workingChannels){ const L=Math.max(1,r.i1-r.i0); for(let i=0;i<L;i++) ch[r.i0+i]*=(1-(i/(L-1))); } this._rebuildBufferFromWorking(); this.needsRedraw=true; }
+      _seSilence(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); for(const ch of this.workingChannels) ch.fill(0,r.i0,r.i1); this._rebuildBufferFromWorking(); this.needsRedraw=true; }
+      _seReverse(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); for(const ch of this.workingChannels){ for(let i=0,j=r.i1-1;i<((r.i1-r.i0)>>1);i++,j--){ const a=r.i0+i,b=j; const t=ch[a]; ch[a]=ch[b]; ch[b]=t; } } this._rebuildBufferFromWorking(); this.needsRedraw=true; }
+      _seNormalize(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); let peak=0; for(const ch of this.workingChannels){ for(let i=r.i0;i<r.i1;i++) peak=Math.max(peak,Math.abs(ch[i])); } if(peak>1e-9){ const g=1/peak; for(const ch of this.workingChannels){ for(let i=r.i0;i<r.i1;i++) ch[i]*=g; } } this._rebuildBufferFromWorking(); this.needsRedraw=true; }
+      _seDcRem(){ const r=this._sampleSelRange(); if(!r) return; this._sePushUndo(); for(const ch of this.workingChannels){ let m=0; for(let i=r.i0;i<r.i1;i++) m+=ch[i]; m/=Math.max(1,r.i1-r.i0); for(let i=r.i0;i<r.i1;i++) ch[i]-=m; } this._rebuildBufferFromWorking(); this.needsRedraw=true; }
+      _seUndoOp(){ if(!this.editUndo.length) return; this.editRedo.push(this._seSnapshot()); this._seRestoreSnapshot(this.editUndo.pop()); }
+      _seRedoOp(){ if(!this.editRedo.length) return; this.editUndo.push(this._seSnapshot()); this._seRestoreSnapshot(this.editRedo.pop()); }
+      _seRestoreOrig(){ if(!this.originalWorking) return; this._sePushUndo(); this.workingChannels=this.originalWorking.map(ch=>new Float32Array(ch)); this._rebuildBufferFromWorking(); this.editSel=null; this.editCursorT=0; this._syncSampleSelectionFields(); this.needsRedraw=true; }
+
+
+      _createScriptBuiltinPresets(){
+        return {
+          'Midi Echo': `// Simple echo: adds delayed repeats for noteOn
+exports.onInit = (api)=>{ api.state.delayMs = 140; api.state.repeats = 2; };
+exports.onNoteOn = (e, api)=>{
+  const out = {...e};
+  out.echo = { delayMs: api.state.delayMs, repeats: api.state.repeats };
+  return out;
+};
+exports.onUI = (api)=>({
+  type:'row',
+  children:[
+    {type:'label', text:'Echo repeats'},
+    {type:'slider', key:'repeats', min:0, max:6, step:1, label:'Repeats'}
+  ]
+});`,
+          'Unison': `// make_perfview
+// on init
+// make_perfview
+// end on
+exports.onInit = (api)=>{ api.state.detune = 0.1; api.makePerfView(); };
+exports.onNoteOn = (e, api)=>({ ...e, unisonVoices: 2, detune: api.state.detune });
+exports.onUI = (api)=>({
+  type:'row',
+  children:[
+    {type:'label', text:'Unison detune'},
+    {type:'slider', key:'detune', min:0, max:0.5, step:0.01, label:'Detune'}
+  ]
+});`,
+          'Arp': `exports.onInit = (api)=>{ api.state.step = 0; api.state.pattern = [0,4,7,12]; };
+exports.onNoteOn = (e, api)=>{
+  const p = api.state.pattern;
+  const step = api.state.step % p.length;
+  api.state.step = step + 1;
+  return { ...e, note: e.note + p[step] };
+};
+exports.onUI = (api)=>({type:'label', text:'Arp running (pattern: 0,4,7,12)'});`
+        };
+      }
+
+      _loadScriptUserPresets(){
+        try{
+          const raw = localStorage.getItem('waveEditorScriptPresets');
+          const arr = raw ? JSON.parse(raw) : [];
+          return Array.isArray(arr) ? arr : [];
+        }catch{
+          return [];
+        }
+      }
+
+      _saveScriptUserPresets(){
+        localStorage.setItem('waveEditorScriptPresets', JSON.stringify(this.scriptUserPresets));
+      }
+
+      _createScriptEditorState(name){
+        return { name, slots: Array.from({length:5}, ()=>({
+          label:'empty',
+          bypass:false,
+          sourceDraft:'',
+          sourceRunning:'',
+          compiled:null,
+          locked:false,
+          password:null,
+          unlocked:true,
+          settings:{},
+          perfEnabled:false,
+          perfByToken:false,
+          lastError:''
+        }))};
+      }
+
+      _currentScriptEditor(){ return this.scriptEditors[this.activeScriptContext]; }
+      _currentScriptSlot(){ return this._currentScriptEditor().slots[this.activeScriptSlotIdx]; }
+
+      _initScriptEditorUI(){
+        this._renderScriptSlotTabs();
+        this._refreshScriptPresetDropdown();
+
+        this.scriptBypassBtn.addEventListener('click', ()=>{
+          const slot = this._currentScriptSlot();
+          slot.bypass = !slot.bypass;
+          this.scriptBypassBtn.setAttribute('aria-pressed', String(slot.bypass));
+          this._refreshScriptSlotTabs();
+          this._refreshPerformanceView();
+        });
+        this.scriptLoadPresetBtn.addEventListener('click', ()=>this._loadSelectedScriptPreset());
+        this.scriptSavePresetBtn.addEventListener('click', ()=>this._saveCurrentScriptPreset());
+        this.scriptEditBtn.addEventListener('click', ()=>{
+          this.scriptCodePanel.classList.toggle('open');
+          this._refreshScriptEditorFields();
+        });
+        this.scriptApplyBtn.addEventListener('click', ()=>this._applyCurrentScriptSource());
+        this.scriptLockBtn.addEventListener('click', ()=>this._handleScriptLockButton());
+
+        this._refreshScriptPanel();
+        this._refreshPerformanceView();
+      }
+
+      _renderScriptSlotTabs(){
+        this.scriptSlotTabs.innerHTML = '';
+        for(let i=0;i<5;i++){
+          const b = document.createElement('button');
+          b.className = 'scriptSlot';
+          b.addEventListener('click', ()=>{ this.activeScriptSlotIdx = i; this._refreshScriptPanel(); });
+          this.scriptSlotTabs.appendChild(b);
+        }
+        this._refreshScriptSlotTabs();
+      }
+
+      _refreshScriptSlotTabs(){
+        const slots = this._currentScriptEditor().slots;
+        Array.from(this.scriptSlotTabs.children).forEach((el,i)=>{
+          const s = slots[i];
+          el.classList.toggle('active', i===this.activeScriptSlotIdx);
+          el.textContent = s.label || 'empty';
+          el.title = s.bypass ? 'Bypassed' : 'Active';
+          el.style.opacity = s.bypass ? '0.55' : '1';
+        });
+      }
+
+      _refreshScriptPresetDropdown(){
+        this.scriptPresetSelect.innerHTML = '';
+        const add = (value, label)=>{
+          const o = document.createElement('option');
+          o.value = value; o.textContent = label; this.scriptPresetSelect.appendChild(o);
+        };
+        add('', 'Preset…');
+        Object.keys(this.scriptBuiltinPresets).forEach(k=>add('builtin:'+k, k));
+        this.scriptUserPresets.forEach(p=>add('user:'+p.name, `User: ${p.name}`));
+      }
+
+      _openScriptEditor(context){
+        this.activeScriptContext = context;
+        this.scriptEditorTitle.textContent = context==='global' ? 'Global Script Editor (KSP)' : 'Instrument Script Editor';
+        this.scriptEditorPanel.classList.add('open');
+        this._refreshScriptPanel();
+      }
+
+      _closeScriptEditor(){ this.scriptEditorPanel.classList.remove('open'); }
+
+      _refreshScriptPanel(){
+        this._refreshScriptSlotTabs();
+        const slot = this._currentScriptSlot();
+        this.scriptBypassBtn.setAttribute('aria-pressed', String(slot.bypass));
+        this._refreshScriptEditorFields();
+        this._renderScriptSlotUI();
+      }
+
+      _refreshScriptEditorFields(){
+        const slot = this._currentScriptSlot();
+        this.scriptStatusMsg.textContent = slot.lastError || '';
+        this.scriptCompileMsg.textContent = '';
+        const showCode = this.scriptCodePanel.classList.contains('open');
+        if(!showCode) return;
+
+        if(slot.locked && !slot.unlocked){
+          this.scriptSource.value = 'Source is locked. Unlock with password to view or edit.';
+          this.scriptSource.disabled = true;
+          this.scriptApplyBtn.disabled = true;
+          this.scriptLockBtn.textContent = 'Unlock';
+        }else{
+          this.scriptSource.disabled = false;
+          this.scriptApplyBtn.disabled = false;
+          this.scriptSource.value = slot.sourceDraft || slot.sourceRunning || '';
+          this.scriptLockBtn.textContent = slot.locked ? 'Lock (active)' : 'Lock with Password';
+        }
+      }
+
+      _handleScriptLockButton(){
+        const slot = this._currentScriptSlot();
+        if(slot.locked && !slot.unlocked){
+          const p = prompt('Enter script password');
+          if(p === slot.password){
+            slot.unlocked = true;
+            this.scriptCompileMsg.textContent = 'Unlocked source editor.';
+          }else{
+            this.scriptCompileMsg.textContent = 'Wrong password.';
+          }
+          this._refreshScriptEditorFields();
+          return;
+        }
+
+        if(!slot.locked){
+          const p1 = prompt('Set password');
+          if(!p1){ this.scriptCompileMsg.textContent = 'Lock canceled.'; return; }
+          const p2 = prompt('Re-enter password');
+          if(p1 !== p2){ this.scriptCompileMsg.textContent = 'Passwords did not match.'; return; }
+          slot.locked = true;
+          slot.password = p1;
+          slot.unlocked = false;
+          this.scriptCompileMsg.textContent = 'Source locked.';
+          this._refreshScriptEditorFields();
+          return;
+        }
+
+        this.scriptCompileMsg.textContent = 'Script already locked and currently unlocked in this session.';
+      }
+
+      _loadSelectedScriptPreset(){
+        const v = this.scriptPresetSelect.value;
+        if(!v) return;
+        const slot = this._currentScriptSlot();
+        let source = '';
+        let name = '';
+        if(v.startsWith('builtin:')){
+          name = v.slice(8);
+          source = this.scriptBuiltinPresets[name] || '';
+        }else if(v.startsWith('user:')){
+          name = v.slice(5);
+          const p = this.scriptUserPresets.find(x=>x.name===name);
+          if(!p) return;
+          source = p.source || '';
+          slot.settings = {...(p.settings||{})};
+        }
+        slot.sourceDraft = source;
+        slot.label = name || 'empty';
+        this._applyCurrentScriptSource(true);
+      }
+
+      _saveCurrentScriptPreset(){
+        const slot = this._currentScriptSlot();
+        const name = prompt('Preset name');
+        if(!name) return;
+        const source = slot.sourceRunning || slot.sourceDraft || '';
+        const idx = this.scriptUserPresets.findIndex(p=>p.name===name);
+        const payload = { name, source, settings: {...slot.settings, bypass:slot.bypass} };
+        if(idx>=0) this.scriptUserPresets[idx] = payload; else this.scriptUserPresets.push(payload);
+        this._saveScriptUserPresets();
+        this._refreshScriptPresetDropdown();
+        this.scriptCompileMsg.textContent = `Saved preset ${name}.`;
+      }
+
+      _applyCurrentScriptSource(fromPreset=false){
+        const slot = this._currentScriptSlot();
+        const source = fromPreset ? (slot.sourceDraft || '') : this.scriptSource.value;
+        if(!fromPreset) slot.sourceDraft = source;
+
+        const compiled = this._compileScriptSlot(source, slot);
+        if(!compiled.ok){
+          slot.lastError = compiled.error;
+          this.scriptCompileMsg.textContent = `Compile error: ${compiled.error}`;
+          this._refreshScriptEditorFields();
+          return;
+        }
+
+        slot.compiled = compiled.module;
+        slot.sourceRunning = source;
+        slot.lastError = '';
+        slot.perfByToken = this._hasPerfViewToken(source);
+        slot.perfEnabled = slot.perfByToken;
+        try{ slot.compiled.onInit?.(compiled.api); }catch(err){ slot.lastError = String(err); }
+        this.scriptCompileMsg.textContent = 'Applied successfully.';
+        this._refreshScriptSlotTabs();
+        this._renderScriptSlotUI();
+        this._refreshPerformanceView();
+      }
+
+      _compileScriptSlot(source, slot){
+        try{
+          const api = this._createScriptApi(slot);
+          const body = `'use strict'; const window=undefined, document=undefined, fetch=undefined, XMLHttpRequest=undefined, WebSocket=undefined, navigator=undefined, eval=undefined, Function=undefined, globalThis=undefined; let exports = {};
+${source}
+; return exports;`;
+          const fn = new Function('api', body);
+          const mod = fn(api) || {};
+          const module = {
+            onInit: typeof mod.onInit==='function' ? mod.onInit : null,
+            onNoteOn: typeof mod.onNoteOn==='function' ? mod.onNoteOn : null,
+            onNoteOff: typeof mod.onNoteOff==='function' ? mod.onNoteOff : null,
+            onCC: typeof mod.onCC==='function' ? mod.onCC : null,
+            onUI: typeof mod.onUI==='function' ? mod.onUI : null
+          };
+          return {ok:true, module, api};
+        }catch(err){
+          return {ok:false, error:String(err)};
+        }
+      }
+
+      _hasPerfViewToken(source){
+        return /on\s+init[\s\S]*make[_ ]perfview[\s\S]*end\s+on/i.test(source) || /make_perfview|makePerfView\(/i.test(source);
+      }
+
+      _createScriptApi(slot){
+        return {
+          state: slot.settings,
+          setParam:(id,v)=>{ slot.settings[id]=v; },
+          getParam:(id,d=0)=> (id in slot.settings ? slot.settings[id] : d),
+          makePerfView:()=>{ slot.perfEnabled = true; },
+          log:(msg)=>{ this.scriptStatusMsg.textContent = String(msg); }
+        };
+      }
+
+      _renderScriptSlotUI(){
+        const slot = this._currentScriptSlot();
+        this.scriptUiArea.innerHTML = '';
+        const info = document.createElement('div');
+        info.style.fontSize = '12px';
+        info.style.color = 'var(--muted2)';
+        info.textContent = `Slot ${this.activeScriptSlotIdx+1} • ${slot.label || 'empty'}${slot.bypass ? ' (bypassed)' : ''}`;
+        this.scriptUiArea.appendChild(info);
+
+        const testRow = document.createElement('div');
+        testRow.className = 'row';
+        testRow.style.marginTop = '8px';
+        testRow.innerHTML = `<button class="btn" data-midi="noteOn">Test NoteOn</button><button class="btn" data-midi="noteOff">Test NoteOff</button><button class="btn" data-midi="cc">Test CC</button>`;
+        testRow.addEventListener('click', (e)=>{
+          const b = e.target.closest('[data-midi]');
+          if(!b) return;
+          const type = b.dataset.midi;
+          const base = type==='cc' ? {type:'cc', cc:1, value:64, channel:1} : {type, note:60, velocity:100, channel:1};
+          const out = this._processScriptEvent(base);
+          this.scriptStatusMsg.textContent = out ? `Output: ${JSON.stringify(out)}` : 'Output: dropped';
+        });
+        this.scriptUiArea.appendChild(testRow);
+
+        if(slot.compiled?.onUI){
+          try{
+            const ui = slot.compiled.onUI(this._createScriptApi(slot));
+            const node = this._normalizeScriptUI(ui, slot);
+            if(node) this.scriptUiArea.appendChild(node);
+          }catch(err){
+            this.scriptStatusMsg.textContent = `UI error: ${String(err)}`;
+          }
+        }
+      }
+
+      _normalizeScriptUI(ui, slot){
+        if(!ui) return null;
+        if(ui instanceof HTMLElement) return ui;
+        if(typeof ui === 'string'){ const d=document.createElement('div'); d.textContent = ui; return d; }
+        if(ui.type === 'label'){ const d=document.createElement('div'); d.style.fontSize='12px'; d.textContent = ui.text || ''; return d; }
+        if(ui.type === 'row' && Array.isArray(ui.children)){
+          const r = document.createElement('div'); r.className='row'; r.style.flexWrap='wrap';
+          ui.children.forEach(c=>{ const n=this._normalizeScriptUI(c, slot); if(n) r.appendChild(n); });
+          return r;
+        }
+        if(ui.type === 'slider'){
+          const wrap = document.createElement('label'); wrap.style.fontSize='12px'; wrap.style.display='inline-flex'; wrap.style.alignItems='center'; wrap.style.gap='6px';
+          const inp = document.createElement('input'); inp.type='range'; inp.min=String(ui.min ?? 0); inp.max=String(ui.max ?? 1); inp.step=String(ui.step ?? 0.01);
+          const key = ui.key || 'value';
+          if(!(key in slot.settings)) slot.settings[key] = Number(ui.min ?? 0);
+          inp.value = String(slot.settings[key]);
+          const out = document.createElement('span'); out.textContent = String(slot.settings[key]); out.style.fontFamily='var(--mono)'; out.style.fontSize='11px';
+          inp.addEventListener('input', ()=>{ slot.settings[key]=Number(inp.value); out.textContent=inp.value; this._refreshPerformanceView(); });
+          wrap.append(ui.label || key, inp, out);
+          return wrap;
+        }
+        return null;
+      }
+
+      _processScriptEvent(event){
+        let ev = {...event};
+        // Global scripts run before Instrument scripts so instrument slots can consume globally transformed events.
+        for(const ctx of ['global','instrument']){
+          const ed = this.scriptEditors[ctx];
+          for(const slot of ed.slots){
+            if(!slot.compiled || slot.bypass) continue;
+            const hook = ev.type==='noteOn' ? slot.compiled.onNoteOn : ev.type==='noteOff' ? slot.compiled.onNoteOff : slot.compiled.onCC;
+            if(!hook) continue;
+            let out = hook({...ev}, this._createScriptApi(slot));
+            if(out == null) return null;
+            if(typeof out === 'object') ev = out;
+          }
+        }
+        return ev;
+      }
+
+      _refreshPerformanceView(){
+        this.perfViewContentEl.innerHTML = '';
+        let count = 0;
+        for(const ctx of ['global','instrument']){
+          const ed = this.scriptEditors[ctx];
+          ed.slots.forEach((slot, idx)=>{
+            if(!slot.compiled || slot.bypass || !slot.perfEnabled) return;
+            const card = document.createElement('div');
+            card.style.border = '1px solid rgba(255,255,255,.12)';
+            card.style.borderRadius = '6px';
+            card.style.padding = '6px';
+            card.style.background = 'rgba(0,0,0,.18)';
+            const title = document.createElement('div');
+            title.style.fontSize = '11px';
+            title.style.color = 'var(--muted2)';
+            title.textContent = `${ctx} slot ${idx+1}: ${slot.label || 'empty'}`;
+            card.appendChild(title);
+            if(slot.compiled.onUI){
+              try{
+                const ui = slot.compiled.onUI(this._createScriptApi(slot));
+                const node = this._normalizeScriptUI(ui, slot);
+                if(node) card.appendChild(node);
+              }catch{}
+            }
+            this.perfViewContentEl.appendChild(card);
+            count++;
+          });
+        }
+        if(!count){
+          const empty = document.createElement('span');
+          empty.style.color = 'var(--muted2)';
+          empty.style.fontSize = '12px';
+          empty.textContent = 'No script controls visible.';
+          this.perfViewContentEl.appendChild(empty);
+        }
+      }
+
+
+      _syncChannelMixer(){
+        const gain = 0.9 * this.ch1Level * this.ch2Level;
+        if(this.masterGain) this.masterGain.gain.value = gain;
+        if(this.ch1ValEl) this.ch1ValEl.textContent = this.ch1Level.toFixed(2);
+        if(this.ch2ValEl) this.ch2ValEl.textContent = this.ch2Level.toFixed(2);
+        if(this.masterMixValEl) this.masterMixValEl.textContent = gain.toFixed(2);
       }
 
       _initCanvas(){
@@ -1062,6 +2913,9 @@
         this.wavePane.addEventListener('pointerdown', (e)=>this._onPointerDown(e));
         window.addEventListener('pointermove', (e)=>this._onPointerMove(e));
         window.addEventListener('pointerup', (e)=>this._onPointerUp(e));
+        this.wavePane.addEventListener('wheel', (e)=>this._onWheel(e), {passive:false});
+        this.wavePane.addEventListener('contextmenu', (e)=>e.preventDefault());
+        this.wavePane.addEventListener('dblclick', (e)=>this._onWaveDoubleClick(e));
       }
 
       _initAudioDemo(){
@@ -1096,6 +2950,9 @@
         // Default loop (like screenshot: loop end at end of sample)
         this.loopSlots[0].start = 0;
         this.loopSlots[0].end = dur;
+        this._buildTransientCandidates();
+        this._rebuildGridMarkers();
+        this._syncGridPanelUI();
         this._renderLoopPanel();
         this._syncReadouts();
       }
@@ -1106,6 +2963,7 @@
         this.masterGain = this.audioCtx.createGain();
         this.masterGain.gain.value = 0.9;
         this.masterGain.connect(this.audioCtx.destination);
+        this._syncChannelMixer();
       }
 
       /* ============================= FILE LOAD ============================= */
@@ -1142,6 +3000,9 @@
           this.loopSlots[this.activeSlot].end = Math.min(this.loopSlots[this.activeSlot].end, dur);
 
           this.sampleNameEl.textContent = file.name;
+          this._buildTransientCandidates();
+          this._rebuildGridMarkers();
+          this._syncGridPanelUI();
           this._syncReadouts();
           this._renderLoopPanel();
           this.needsRedraw = true;
@@ -1304,12 +3165,22 @@
         // Stop any existing playback
         this.stop();
 
+        if(this.syncMode === 'beatmachine'){
+          this._playBeatmachine();
+          return;
+        }
+        if(this.syncMode === 'timemachine'){
+          this._playTimemachine();
+          return;
+        }
+
         const loopOn = this._isPressed(this.loopToggle);
         const L = this._activeLoop();
+        const oneShotFirst = this.loopSlots[0]?.active && this.loopSlots[0]?.mode === 'oneShot';
 
-        // Zone playback vs loop-only playback
-        let start = loopOn ? L.start : this.zoneStart;
-        let end = loopOn ? L.end : this.zoneEnd;
+        // Zone-constrained playback (for normal play and loop play)
+        let start = (loopOn && this.loopGlobalPower && L?.active && !oneShotFirst) ? Math.max(this.zoneStart, L.start) : this.zoneStart;
+        let end = (loopOn && this.loopGlobalPower && L?.active && !oneShotFirst) ? Math.min(this.zoneEnd, L.end) : this.zoneEnd;
 
         start = this._clamp(start, 0, this.buffer.duration);
         end = this._clamp(end, 0, this.buffer.duration);
@@ -1321,7 +3192,7 @@
         const src = this.audioCtx.createBufferSource();
         src.buffer = this.buffer;
 
-        if(loopOn){
+        if(loopOn && this.loopGlobalPower && L?.active && !oneShotFirst){
           src.loop = true;
           src.loopStart = start;
           src.loopEnd = end;
@@ -1329,11 +3200,11 @@
           src.loop = false;
         }
 
-        src.connect(this.masterGain);
+        this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, start, end-start, 1);
 
         // Start from region offset (note: duration arg is optional; for one-shot we pass it)
         try{
-          if(loopOn){
+          if(src.loop){
             src.start(0, start);
           }else{
             src.start(0, start, end - start);
@@ -1350,6 +3221,8 @@
       }
 
       stop(){
+        this._beatPlaying = false;
+        if(this._beatTimer){ clearTimeout(this._beatTimer); this._beatTimer = null; }
         if(this.source){
           try{ this.source.stop(); }catch(e){}
           this.source = null;
@@ -1380,8 +3253,8 @@
         let t = 0;
         if(which==='zoneStart') t = this.zoneStart;
         if(which==='zoneEnd')   t = this.zoneEnd;
-        if(which==='loopStart') t = L.start;
-        if(which==='loopEnd')   t = L.end;
+        if(which==='loopStart' && L) t = L.start;
+        if(which==='loopEnd' && L)   t = L.end;
 
         // Center view around t (except for zone edges where we align to edge)
         if(which==='zoneStart'){
@@ -1402,6 +3275,7 @@
 
       _zoomOnLoop(){
         const L = this._activeLoop();
+        if(!L) return;
         const len = Math.max(0.001, L.end - L.start);
         const pad = len * 0.08;
         this._pushZoom();
@@ -1457,10 +3331,43 @@
         }
       }
 
+      _onWheel(e){
+        e.preventDefault();
+        if(e.shiftKey){
+          const shift = (this.viewEnd - this.viewStart) * (e.deltaY > 0 ? 0.08 : -0.08);
+          this.viewStart += shift;
+          this.viewEnd += shift;
+          this._clampViewToZone();
+        }else{
+          const maxShift = Math.max(0, (this.zoomY - 1) * 0.45);
+          if(maxShift > 0){
+            this.viewOffsetY = this._clamp(this.viewOffsetY + (e.deltaY > 0 ? 0.06 : -0.06), -maxShift, maxShift);
+          }
+        }
+        this.needsRedraw = true;
+      }
+
       /* ============================= POINTER / MARKERS ============================= */
 
+      _isLoopTabActive(){ return this.currentTab === "loop"; }
+      _isSyncTabActive(){ return this.currentTab === "sync"; }
+      _isEnvTabActive(){ return this.currentTab === "env"; }
+
+      _onWaveDoubleClick(e){
+        if(!this._isEnvTabActive()) return;
+        const env = this._visibleEnvelope();
+        if(!env) return;
+        const {x, y} = this._localXY(e);
+        if(y < 26) return;
+        const t = this._clamp((this._xToTime(x)-this.zoneStart)/Math.max(0.0001,this.zoneEnd-this.zoneStart),0,1);
+        const v = this._yToEnvValue(y, 26, this.wavePane.clientHeight-28);
+        env.points.push({t,v});
+        env.points.sort((a,b)=>a.t-b.t);
+        this.selectedEnvPointIdx = env.points.findIndex(p=>p.t===t && p.v===v);
+        this.needsRedraw = true;
+      }
+
       _onPointerDown(e){
-        // Magnify behavior: if enabled OR Alt held
         const magnifyActive = this.magnify || e.altKey;
 
         const {x, y} = this._localXY(e);
@@ -1470,63 +3377,224 @@
         this.wavePane.setPointerCapture?.(e.pointerId);
 
         if(magnifyActive){
-          // Start a zoom frame selection
           this.drag = { type:'frame', x0:x, y0:y, x1:x, y1:y, wasClick:true };
           this.needsRedraw = true;
           return;
         }
 
-        if(hit){
-          this.drag = { type: hit, x0:x, time0: this._xToTime(x) };
+        if(this._isEnvTabActive()){
+          const env = this._visibleEnvelope();
+          if(env){
+            const waveY = 26, waveH = this.wavePane.clientHeight-28;
+            let hitIdx = -1;
+            for(let i=0;i<env.points.length;i++){
+              const pt = env.points[i];
+              const px = this._timeToX(this.zoneStart + pt.t*(this.zoneEnd-this.zoneStart));
+              const py = this._envValueToY(pt.v, waveY, waveH);
+              if(Math.abs(px-x)<7 && Math.abs(py-y)<7){ hitIdx=i; break; }
+            }
+            if(hitIdx>=0){
+              this.selectedEnvPointIdx = hitIdx;
+              this.drag = { type:'envPoint', idx:hitIdx };
+              this.needsRedraw = true;
+              return;
+            }
+            this.selectedEnvPointIdx = -1;
+            this.needsRedraw = true;
+          }
+        }
+
+        if(this._isSyncTabActive() && y > 24 && e.button===0){
+          const t = this._xToTime(x);
+          const idx = this._sliceAtTime(t);
+          if(idx >= 0){
+            if(e.shiftKey){
+              if(this.selectedSlices.has(idx)) this.selectedSlices.delete(idx); else this.selectedSlices.add(idx);
+            }else{
+              this.selectedSlices.clear();
+              this.selectedSlices.add(idx);
+            }
+            this.drag = { type:'sliceMapDrag', x0:x, y0:y };
+            if(this._isPressed(this.loopOnSliceSelectBtn)) this._loopToSlice(idx, this._isPressed(this.autoPrelisten));
+            this.needsRedraw = true;
+            return;
+          }
+          this.drag = { type:'sliceSelectRect', x0:x, x1:x };
+          this.selectedSlices.clear();
           this.needsRedraw = true;
           return;
         }
 
-        // Otherwise, clicking inside waveform clears drag and (if magnify toggle on) zoom out
+        if(this._isLoopTabActive()){
+          const L = this._activeLoop();
+          if(e.button === 2){
+            const idx = (this.activeSlot != null && this.activeSlot >= 0) ? this.activeSlot : 0;
+            this.activeSlot = idx;
+            this.loopSlots[idx].active = true;
+            this.drag = { type:'quickLoopCreate', x0:x, x1:x };
+            this.needsRedraw = true;
+            return;
+          }
+          if(this.loopEditView && y > 24 && L?.active){
+            this.drag = { type: x < (this.wavePane.clientWidth/2) ? 'loopEditEnd':'loopEditStart', x0:x, t0:this._xToTime(x) };
+            return;
+          }
+          if(L?.active){
+            const lS = this._timeToX(L.start);
+            const lE = this._timeToX(L.end);
+            if(x > Math.min(lS,lE)+8 && x < Math.max(lS,lE)-8 && y > 24){
+              this.drag = { type:'loopMove', x0:x, start0:L.start, end0:L.end };
+              return;
+            }
+          }
+        }
+
+        if(this.gridPower && this.gridTool==='add' && y > 24){
+          const t = this._clamp(this._xToTime(x), this.zoneStart, this.zoneEnd);
+          this.gridMarkers.push(this._newMarker(t, 'manual', false));
+          this._sortMarkers(this.gridMarkers);
+          this.needsRedraw = true;
+          this.drag = null;
+          return;
+        }
+
+        if(hit){
+          if(this.gridTool==='remove' && hit.startsWith('gridHandle:')){
+            const idx = Number(hit.split(':')[1]);
+            this.gridMarkers.splice(idx, 1);
+            this.needsRedraw = true;
+            this.drag = null;
+            return;
+          }
+          if(this.gridTool==='lock' && (hit.startsWith('gridHandle:') || hit.startsWith('gridMarker:'))){
+            const idx = Number(hit.split(':')[1]);
+            if(this.gridMarkers[idx]) this.gridMarkers[idx].locked = !this.gridMarkers[idx].locked;
+            this.needsRedraw = true;
+            this.drag = null;
+            return;
+          }
+          this.drag = { type: hit, x0:x, time0: this._xToTime(x), markers0: this.gridMarkers.map(m=>({...m})) };
+          this.needsRedraw = true;
+          return;
+        }
+
         this.drag = null;
       }
 
       _onPointerMove(e){
         if(!this.pointerDown || !this.drag) return;
-        const {x, y} = this._localXY(e);
+        const {x} = this._localXY(e);
 
         if(this.drag.type === 'frame'){
           this.drag.x1 = x;
-          this.drag.y1 = y;
           this.drag.wasClick = this.drag.wasClick && (Math.abs(this.drag.x1 - this.drag.x0) < 3);
           this.needsRedraw = true;
           return;
         }
+        if(this.drag.type === 'sliceSelectRect'){
+          this.drag.x1 = x;
+          this._selectSlicesByRange(this._xToTime(this.drag.x0), this._xToTime(this.drag.x1));
+          this.needsRedraw = true;
+          return;
+        }
 
-        // Dragging marker: convert x->time, apply snapping if needed
         const t = this._xToTime(x);
+        if(this.drag.type === 'envPoint'){
+          const env = this._visibleEnvelope();
+          if(env && env.points[this.drag.idx]){
+            const pt = env.points[this.drag.idx];
+            const nt = this._envSnapTime(t);
+            const normT = this._clamp((nt-this.zoneStart)/Math.max(0.0001,this.zoneEnd-this.zoneStart),0,1);
+            pt.t = normT;
+            pt.v = this._yToEnvValue(this._localXY(e).y, 26, this.wavePane.clientHeight-28);
+            env.points.sort((a,b)=>a.t-b.t);
+            this.selectedEnvPointIdx = env.points.indexOf(pt);
+          }
+        }
         if(this.drag.type === 'zoneStart'){
           this.zoneStart = this._snapSampleMarkerIfNeeded(t);
-          // keep within bounds
           this.zoneStart = this._clamp(this.zoneStart, 0, this.zoneEnd - 1/this.sampleRate);
-          // keep loop inside zone
           const L = this._activeLoop();
-          L.start = Math.max(L.start, this.zoneStart);
-          L.end = Math.max(L.end, L.start + 1/this.sampleRate);
+          if(L){
+            L.start = Math.max(L.start, this.zoneStart);
+            L.end = Math.max(L.end, L.start + 1/this.sampleRate);
+          }
+          this._rebuildGridMarkers();
         }
         if(this.drag.type === 'zoneEnd'){
           this.zoneEnd = this._snapSampleMarkerIfNeeded(t);
           this.zoneEnd = this._clamp(this.zoneEnd, this.zoneStart + 1/this.sampleRate, this.buffer?.duration ?? Infinity);
           const L = this._activeLoop();
-          L.end = Math.min(L.end, this.zoneEnd);
-          L.start = Math.min(L.start, L.end - 1/this.sampleRate);
-          // clamp view
+          if(L){
+            L.end = Math.min(L.end, this.zoneEnd);
+            L.start = Math.min(L.start, L.end - 1/this.sampleRate);
+          }
           this._clampViewToZone();
+          this._rebuildGridMarkers();
         }
         if(this.drag.type === 'loopStart'){
           const L = this._activeLoop();
-          const snapped = this._snapLoopMarkerIfNeeded(t, 'start');
-          L.start = this._clamp(snapped, this.zoneStart, L.end - 1/this.sampleRate);
+          if(L){
+            const snapped = this._snapToGridMarkerIfNeeded(this._snapLoopMarkerIfNeeded(t, 'start'));
+            L.start = this._clamp(snapped, this.zoneStart, L.end - 1/this.sampleRate);
+          }
         }
         if(this.drag.type === 'loopEnd'){
           const L = this._activeLoop();
-          const snapped = this._snapLoopMarkerIfNeeded(t, 'end');
-          L.end = this._clamp(snapped, L.start + 1/this.sampleRate, this.zoneEnd);
+          if(L){
+            const snapped = this._snapToGridMarkerIfNeeded(this._snapLoopMarkerIfNeeded(t, 'end'));
+            L.end = this._clamp(snapped, L.start + 1/this.sampleRate, this.zoneEnd);
+          }
+        }
+        if(this.drag.type === 'loopMove'){
+          const L = this._activeLoop();
+          if(L){
+            const dt = this._xToTime(x) - this._xToTime(this.drag.x0);
+            const len = this.drag.end0 - this.drag.start0;
+            let ns = this.drag.start0 + dt;
+            ns = this._clamp(ns, this.zoneStart, this.zoneEnd - len);
+            L.start = this._snapToGridMarkerIfNeeded(ns);
+            L.end = this._clamp(L.start + len, L.start + 1/this.sampleRate, this.zoneEnd);
+          }
+        }
+        if(this.drag.type === 'loopEditEnd'){
+          const L = this._activeLoop();
+          if(L){
+            const dt = (x - this.drag.x0) / Math.max(1, this.wavePane.clientWidth) * (this.viewEnd - this.viewStart);
+            const v = this._snapToGridMarkerIfNeeded(L.end + dt);
+            L.end = this._clamp(v, L.start + 1/this.sampleRate, this.zoneEnd);
+            this.drag.x0 = x;
+          }
+        }
+        if(this.drag.type === 'loopEditStart'){
+          const L = this._activeLoop();
+          if(L){
+            const dt = (x - this.drag.x0) / Math.max(1, this.wavePane.clientWidth) * (this.viewEnd - this.viewStart);
+            const v = this._snapToGridMarkerIfNeeded(L.start + dt);
+            L.start = this._clamp(v, this.zoneStart, L.end - 1/this.sampleRate);
+            this.drag.x0 = x;
+          }
+        }
+        if(this.drag.type === 'quickLoopCreate'){
+          this.drag.x1 = x;
+        }
+        const movingGridIdx = (this.drag.type.startsWith('gridMarker:') || this.drag.type.startsWith('gridHandle:')) ? Number(this.drag.type.split(':')[1]) : -1;
+        if(movingGridIdx === 0){
+          const dt = t - this.drag.time0;
+          if(!this.drag.markers0[0]?.locked){
+            this.gridMarkers = this.drag.markers0.map((m, i)=>{
+              if(i===0) return {...m, timeSec:this._clamp(this._markerTime(m)+dt, this.zoneStart, this.zoneEnd)};
+              if(!m.locked) return {...m, timeSec:this._clamp(this._markerTime(m)+dt, this.zoneStart, this.zoneEnd)};
+              return {...m};
+            });
+            this._sortMarkers(this.gridMarkers);
+          }
+        }
+        if(movingGridIdx > 0){
+          if(this.gridMarkers[movingGridIdx] && !this.gridMarkers[movingGridIdx].locked){
+            this.gridMarkers[movingGridIdx].timeSec = this._clamp(t, this.zoneStart, this.zoneEnd);
+            this._sortMarkers(this.gridMarkers);
+          }
         }
 
         this._renderLoopPanel();
@@ -1544,12 +3612,10 @@
 
           if(magnifyActive){
             if(Math.abs(dx) < 4){
-              // click -> zoom out
               this._zoomOutOne();
               this.drag = null;
               return;
             }
-            // drag -> zoom into selected time range
             const xA = Math.min(this.drag.x0, this.drag.x1);
             const xB = Math.max(this.drag.x0, this.drag.x1);
             const tA = this._xToTime(xA);
@@ -1566,6 +3632,32 @@
           return;
         }
 
+        if(this.drag && this.drag.type === 'quickLoopCreate'){
+          const L = this._activeLoop();
+          if(L){
+            const xA = Math.min(this.drag.x0, this.drag.x1);
+            const xB = Math.max(this.drag.x0, this.drag.x1);
+            if(Math.abs(xB-xA) > 3){
+              L.start = this._snapToGridMarkerIfNeeded(this._clamp(this._xToTime(xA), this.zoneStart, this.zoneEnd));
+              L.end = this._snapToGridMarkerIfNeeded(this._clamp(this._xToTime(xB), L.start + 1/this.sampleRate, this.zoneEnd));
+              L.active = true;
+              this._renderLoopPanel();
+            }
+          }
+        }
+
+        if(this.drag && this.drag.type === 'sliceMapDrag'){
+          const moved = Math.abs((this.drag.x0||0) - (this._localXY(e).x||0)) > 6 || Math.abs((this.drag.y0||0) - (this._localXY(e).y||0)) > 6;
+          if(moved && this.selectedSlices.size){
+            this._mapSelectedToKeyboardFromPoint(e.clientX, e.clientY);
+          }
+        }
+
+        if(this.drag && this.drag.type.startsWith('gridHandle:') && this.gridTool==='move'){
+          const idx = Number(this.drag.type.split(':')[1]);
+          this._auditionGridSlice(idx);
+        }
+
         const changedMarker = this.drag && this.drag.type && this.drag.type !== 'frame';
         this.drag = null;
         this.needsRedraw = true;
@@ -1576,20 +3668,26 @@
       }
 
       _hitTestMarkers(x, y){
-        // Marker positions (in px)
         const zS = this._timeToX(this.zoneStart);
         const zE = this._timeToX(this.zoneEnd);
         const L = this._activeLoop();
-        const lS = this._timeToX(L.start);
-        const lE = this._timeToX(L.end);
+        const lS = L ? this._timeToX(L.start) : -9999;
+        const lE = L ? this._timeToX(L.end) : -9999;
+        const near = (a,b,r=6)=>Math.abs(a-b) < r;
 
-        const near = (a,b)=>Math.abs(a-b) < 6;
+        // Keep grid marker dragging focused to Sync/Slice interactions so it doesn't steal loop/zone grabs.
+        if(this.gridPower && this._isSyncTabActive()){
+          for(let i=0;i<this.gridMarkers.length;i++){
+            const gx = this._timeToX(this._markerTime(this.gridMarkers[i]));
+            if(near(x,gx,7) && y <= 44) return `gridHandle:${i}`;
+            if(near(x,gx,6)) return `gridMarker:${i}`;
+          }
+        }
 
-        // Prefer loop markers over zone markers if very close
-        if(near(x, lS)) return 'loopStart';
-        if(near(x, lE)) return 'loopEnd';
-        if(near(x, zS)) return 'zoneStart';
-        if(near(x, zE)) return 'zoneEnd';
+        if(L && L.active && near(x, lS) && y > 24) return 'loopStart';
+        if(L && L.active && near(x, lE) && y > 24) return 'loopEnd';
+        if(near(x, zS, 9) && y > 24) return 'zoneStart';
+        if(near(x, zE, 7) && y > 24) return 'zoneEnd';
         return null;
       }
 
@@ -1598,6 +3696,18 @@
       _snapSampleMarkerIfNeeded(time){
         if(!this.snapSampleToZero || !this.mono || !this.buffer) return time;
         return this._snapToZeroCrossing(time, null);
+      }
+
+      _snapToGridMarkerIfNeeded(time){
+        if(!this.gridPower || !this.gridMarkers?.length) return time;
+        let best = this._markerTime(this.gridMarkers[0]);
+        let dist = Math.abs(best - time);
+        for(let i=1;i<this.gridMarkers.length;i++){
+          const t = this._markerTime(this.gridMarkers[i]);
+          const d = Math.abs(t - time);
+          if(d < dist){ dist = d; best = t; }
+        }
+        return best;
       }
 
       _snapLoopMarkerIfNeeded(time, edge){
@@ -1698,6 +3808,7 @@
       _restoreLoopsFromSample(){
         const dur = this.buffer?.duration ?? this.zoneEnd;
         const L = this._activeLoop();
+        if(!L) return;
         L.start = this.zoneStart;
         L.end = this.zoneEnd;
         this._renderLoopPanel();
@@ -1709,6 +3820,7 @@
         if(!this.mono || !this.buffer) return;
 
         const L = this._activeLoop();
+        if(!L) return;
         const sr = this.sampleRate;
 
         const startIdx = this._timeToSampleIndex(L.start);
@@ -1783,9 +3895,45 @@
         this._toast(`DC Removal applied (mean=${mean.toFixed(6)}).`);
       }
 
+      _loopRhythmToBeats(token){
+        const beatsPerBar = Number((this.gridSig || '4/4').split('/')[0] || 4);
+        if(token === '1bar') return beatsPerBar;
+        if(token === '2bars') return beatsPerBar * 2;
+        if(token === '4bars') return beatsPerBar * 4;
+        if(token === '1/2') return 2;
+        if(token === '1/4') return 1;
+        if(token === '1/8') return 0.5;
+        if(token === '1/16') return 0.25;
+        return beatsPerBar;
+      }
+
+      _applyRhythmicLoopLength(scale=1){
+        if(!this.buffer) return;
+        const L = this._activeLoop();
+        if(!L) return;
+        const beats = this._loopRhythmToBeats(this.loopRhythmLen) * Math.max(0.125, scale);
+        const dur = beats * (60 / Math.max(20, this.gridBpm || 120));
+        const clampedDur = this._clamp(dur, 1/this.sampleRate, this.zoneEnd - this.zoneStart);
+
+        let start = this._clamp(L.start, this.zoneStart, this.zoneEnd - clampedDur);
+        let end = start + clampedDur;
+        if(end > this.zoneEnd){
+          end = this.zoneEnd;
+          start = this._clamp(end - clampedDur, this.zoneStart, this.zoneEnd - 1/this.sampleRate);
+        }
+
+        L.start = this._snapToGridMarkerIfNeeded(this._clamp(start, this.zoneStart, this.zoneEnd - 1/this.sampleRate));
+        L.end = this._snapToGridMarkerIfNeeded(this._clamp(end, L.start + 1/this.sampleRate, this.zoneEnd));
+        this._renderLoopPanel();
+        this._syncReadouts();
+        this.needsRedraw = true;
+        if(this._isPressed(this.autoPrelisten)) this._prelistenLoop();
+      }
+
       _nudgeLoop(edge, deltaSamples){
         if(!this.buffer) return;
         const L = this._activeLoop();
+        if(!L) return;
         const dt = deltaSamples / this.sampleRate;
 
         if(edge === 'start'){
@@ -1796,8 +3944,8 @@
 
         // Apply snap (if enabled)
         if(this.snapLoopMode !== 'none'){
-          if(edge === 'start') L.start = this._snapLoopMarkerIfNeeded(L.start, 'start');
-          if(edge === 'end')   L.end   = this._snapLoopMarkerIfNeeded(L.end, 'end');
+          if(edge === 'start') L.start = this._snapToGridMarkerIfNeeded(this._snapLoopMarkerIfNeeded(L.start, 'start'));
+          if(edge === 'end')   L.end   = this._snapToGridMarkerIfNeeded(this._snapLoopMarkerIfNeeded(L.end, 'end'));
         }
 
         this._renderLoopPanel();
@@ -1849,13 +3997,165 @@
         this._toast('Opened external Wave Editor window.');
       }
 
+
+
+      _setGridTool(tool){
+        this.gridTool = tool;
+        this._syncGridPanelUI();
+        this.needsRedraw = true;
+      }
+
+      _syncGridPanelUI(){
+        this.gridPanel.classList.toggle('off', !this.gridPower);
+        this.gridPowerBtn.setAttribute('aria-pressed', String(this.gridPower));
+        this.gridFixBtn.setAttribute('aria-pressed', String(this.gridMode==='fix'));
+        this.gridAutoBtn.setAttribute('aria-pressed', String(this.gridMode==='auto'));
+        this.gridWidthPill.textContent = this.gridWidthOptions[this.gridWidthIdx];
+        this.bpmPill.textContent = this.gridBpm.toFixed(2);
+        this.sigSelect.value = this.gridSig;
+        this.autoThresholdRow.style.display = (this.gridMode==='auto') ? '' : 'none';
+        this.minSliceRow.style.display = (this.gridMode==='auto') ? '' : 'none';
+        this.minSliceMsEl.value = String(Math.round(this.minSliceMs));
+        this.gridToolAddBtn.setAttribute('aria-pressed', String(this.gridTool==='add'));
+        this.gridToolRemoveBtn.setAttribute('aria-pressed', String(this.gridTool==='remove'));
+        this.gridToolLockBtn.setAttribute('aria-pressed', String(this.gridTool==='lock'));
+      }
+
+      _gridStepSeconds(){
+        const width = this.gridWidthOptions[this.gridWidthIdx];
+        const beat = 60 / this.gridBpm;
+        const sigDen = Number(this.gridSig.split('/')[1] || 4);
+        const beatScale = 4 / sigDen;
+        const whole = beat * beatScale * 4;
+        const frac = Number(width.split('/')[1] || 1);
+        return whole / frac;
+      }
+
+      _buildTransientCandidates(){
+        this.gridTransientCandidates = [];
+        if(!this.mono || !this.buffer) return;
+
+        const win = Math.max(32, Math.floor(this.sampleRate * 0.008));
+        const windows = [];
+        for(let i=win;i<this.mono.length-win;i+=win){
+          let peak = 0;
+          let peakIdx = i;
+          for(let j=0;j<win;j++){
+            const v = Math.abs(this.mono[i+j]);
+            if(v > peak){ peak = v; peakIdx = i+j; }
+          }
+          windows.push({t:peakIdx/this.sampleRate, e:peak});
+        }
+
+        for(let i=1;i<windows.length-1;i++){
+          const a = windows[i-1], b = windows[i], c = windows[i+1];
+          if(b.e >= a.e && b.e > c.e && b.e > 0.0005) this.gridTransientCandidates.push(b);
+        }
+      }
+
+      _newMarker(timeSec, source='auto', locked=false){
+        return { timeSec, source, locked };
+      }
+
+      _markerTime(m){ return (typeof m === 'number') ? m : m.timeSec; }
+
+      _sortMarkers(markers){
+        markers.sort((a,b)=>this._markerTime(a)-this._markerTime(b));
+        return markers;
+      }
+
+      _mergeAutoWithPreserved(autoMarkers){
+        const minGap = this.minSliceMs / 1000;
+        const preserved = this._sortMarkers(this.gridMarkers.filter(m=>m.locked || m.source==='manual').map(m=>({...m})));
+        const accepted = [...preserved];
+        const sortedAuto = this._sortMarkers(autoMarkers.map(m=>({...m, locked:false, source:'auto'})));
+
+        for(const cand of sortedAuto){
+          const t = this._markerTime(cand);
+          let ins = 0;
+          while(ins<accepted.length && this._markerTime(accepted[ins]) < t) ins++;
+          const prev = accepted[ins-1];
+          const next = accepted[ins];
+          if(prev && (t - this._markerTime(prev)) < minGap) continue;
+          if(next && (this._markerTime(next) - t) < minGap) continue;
+          accepted.splice(ins, 0, cand);
+        }
+        return accepted;
+      }
+
+      _rebuildGridMarkers(){
+        if(!this.buffer) return;
+        if(!this.gridPower) return;
+
+        if(this.gridMode === 'fix'){
+          const preserved = this.gridMarkers.filter(m=>m.locked || m.source==='manual').map(m=>({...m}));
+          const generated = [];
+          const step = this._gridStepSeconds();
+          const maxCount = 512;
+          for(let i=0;i<maxCount;i++){
+            const t = this.zoneStart + this.gridOffset + i*step;
+            if(t > this.zoneEnd) break;
+            if(t >= this.zoneStart) generated.push(this._newMarker(t, 'auto', false));
+          }
+          this.gridMarkers = this._sortMarkers([...preserved, ...generated]);
+          return;
+        }
+
+        const maxE = this.gridTransientCandidates.reduce((m,c)=>Math.max(m,c.e), 1e-6);
+        const gate = maxE * this.gridThreshold;
+        let autoMarkers = this.gridTransientCandidates
+          .filter(c=>c.t>=this.zoneStart && c.t<=this.zoneEnd && c.e>=gate)
+          .map(c=>this._newMarker(c.t, 'auto', false))
+          .slice(0, 512);
+
+        if(autoMarkers.length===0 || this._markerTime(autoMarkers[0]) > this.zoneStart + 1/this.sampleRate){
+          autoMarkers.unshift(this._newMarker(this.zoneStart, 'auto', false));
+        }
+
+        this.gridMarkers = this._mergeAutoWithPreserved(autoMarkers);
+      }
+
+      async _auditionGridSlice(idx){
+        if(!this.buffer || !this.gridPower || this.gridMarkers[idx] == null) return;
+        if(this._isPressed(this.loopOnSliceSelectBtn)) this._loopToSlice(idx, false);
+        await this._ensureAudio();
+        this.stop();
+        const start = this._clamp(this._markerTime(this.gridMarkers[idx]), this.zoneStart, this.zoneEnd);
+        const next = this.gridMarkers[idx+1] ? this._markerTime(this.gridMarkers[idx+1]) : this.zoneEnd;
+        const end = this._clamp(next, start + 1/this.sampleRate, this.zoneEnd);
+        const src = this.audioCtx.createBufferSource();
+        src.buffer = this.buffer;
+        this._applyEnvelopesForSource(src, src, this.audioCtx.currentTime, start, end-start, 1);
+        try{ src.start(0, start, end-start); }catch(e){ console.warn(e); }
+        src.onended = ()=>{ if(this.source === src) this.source = null; };
+        this.source = src;
+      }
+
       /* ============================= LOOP PANEL SYNC ============================= */
 
-      _activeLoop(){ return this.loopSlots[this.activeSlot]; }
+      _activeLoop(){
+        if(this.activeSlot == null || this.activeSlot < 0) return null;
+        return this.loopSlots[this.activeSlot] ?? null;
+      }
 
       _renderLoopPanel(){
         if(!this.buffer) return;
         const L = this._activeLoop();
+
+        this.slotEls.forEach(el=>{
+          const idx = Number(el.dataset.slot);
+          const loop = this.loopSlots[idx];
+          el.classList.toggle('on', !!loop?.active);
+          el.classList.toggle('active', idx===this.activeSlot && !!loop?.active);
+        });
+
+        if(!L){
+          this.loopStartSamplesEl.value = '0';
+          this.loopEndSamplesEl.value = '0';
+          this.loopStartTimeEl.textContent = '0.000s';
+          this.loopEndTimeEl.textContent = '0.000s';
+          return;
+        }
 
         const s = Math.floor(L.start * this.sampleRate);
         const e = Math.floor(L.end * this.sampleRate);
@@ -1864,16 +4164,24 @@
         this.loopEndSamplesEl.value = String(e);
         this.loopStartTimeEl.textContent = L.start.toFixed(3) + 's';
         this.loopEndTimeEl.textContent = L.end.toFixed(3) + 's';
-        this.xfadeSamplesEl.value = String(L.xfade|0);
+        this.xfadeSamplesEl.value = String((L.xfadeMs ?? 0).toFixed(2));
         this.loopModeEl.value = L.mode;
+        this.loopRhythmLenEl.value = this.loopRhythmLen;
+        this.loopTuneEl.value = String(L.tune ?? 0);
+        this.loopCountEl.value = String(L.count ?? 0);
+        this.loopSlotPowerBtn.setAttribute('aria-pressed', String(!!L.active));
+        this.loopGlobalPowerBtn.setAttribute('aria-pressed', String(this.loopGlobalPower));
+        this.loopEditToggleBtn.setAttribute('aria-pressed', String(this.loopEditView));
       }
 
       _setLoopStartSamples(n){
         if(!this.buffer) return;
         const L = this._activeLoop();
+        if(!L) return;
         const s = this._clamp(Math.floor(n), 0, this.mono.length-2);
         let t = s / this.sampleRate;
         t = this._snapLoopMarkerIfNeeded(t, 'start');
+        t = this._snapToGridMarkerIfNeeded(t);
         L.start = this._clamp(t, this.zoneStart, L.end - 1/this.sampleRate);
         this._renderLoopPanel();
         this.needsRedraw = true;
@@ -1882,9 +4190,11 @@
       _setLoopEndSamples(n){
         if(!this.buffer) return;
         const L = this._activeLoop();
+        if(!L) return;
         const e = this._clamp(Math.floor(n), 1, this.mono.length-1);
         let t = e / this.sampleRate;
         t = this._snapLoopMarkerIfNeeded(t, 'end');
+        t = this._snapToGridMarkerIfNeeded(t);
         L.end = this._clamp(t, L.start + 1/this.sampleRate, this.zoneEnd);
         this._renderLoopPanel();
         this.needsRedraw = true;
@@ -1945,6 +4255,9 @@
         // Waveform itself
         this._drawWave(ctx, W, waveY, waveH);
 
+        // Zone envelope overlay
+        this._drawEnvelopeOverlay(ctx, W, waveY, waveH);
+
         // Markers on top
         this._drawMarkers(ctx, W, waveY, waveH);
 
@@ -1956,6 +4269,13 @@
           ctx.fillRect(xA, waveY, xB-xA, waveH);
           ctx.strokeStyle = 'rgba(242,193,78,.85)';
           ctx.lineWidth = 1;
+          ctx.strokeRect(xA+0.5, waveY+0.5, (xB-xA)-1, waveH-1);
+        }
+        if(this.drag && this.drag.type==='sliceSelectRect'){
+          const xA = Math.min(this.drag.x0,this.drag.x1), xB = Math.max(this.drag.x0,this.drag.x1);
+          ctx.fillStyle = 'rgba(57,217,138,.10)';
+          ctx.fillRect(xA, waveY, xB-xA, waveH);
+          ctx.strokeStyle = 'rgba(57,217,138,.85)';
           ctx.strokeRect(xA+0.5, waveY+0.5, (xB-xA)-1, waveH-1);
         }
 
@@ -2010,27 +4330,88 @@
       }
 
       _drawRegions(ctx, W, y, h){
-        const L = this._activeLoop();
-        const zS = this._timeToX(this.zoneStart);
-        const zE = this._timeToX(this.zoneEnd);
-        const lS = this._timeToX(L.start);
-        const lE = this._timeToX(L.end);
+        const Lsel = this._activeLoop();
 
-        // Zone background subtle
         ctx.fillStyle = 'rgba(0,0,0,.10)';
         ctx.fillRect(0, y, W, h);
 
-        // Loop region highlight
-        ctx.fillStyle = 'rgba(242,193,78,.12)';
-        ctx.fillRect(Math.min(lS,lE), y, Math.abs(lE-lS), h);
+        if(this._isLoopTabActive() && this.loopGlobalPower){
+          for(let i=0;i<this.loopSlots.length;i++){
+            const L = this.loopSlots[i];
+            if(!L?.active) continue;
+            const lS = this._timeToX(L.start);
+            const lE = this._timeToX(L.end);
+            const isSel = i===this.activeSlot;
+            ctx.fillStyle = isSel ? 'rgba(242,193,78,.20)' : 'rgba(110,170,235,.12)';
+            ctx.fillRect(Math.min(lS,lE), y, Math.abs(lE-lS), h);
+          }
+        }
 
-        // Zero line
+        if(this._isPressed(this.loopToggle) && Lsel?.active && this.loopGlobalPower){
+          const lS = this._timeToX(Lsel.start);
+          const lE = this._timeToX(Lsel.end);
+          ctx.strokeStyle = 'rgba(242,193,78,.45)';
+          ctx.beginPath();
+          ctx.moveTo(lS, y+h);
+          ctx.lineTo(lS + 18, y+h-18);
+          ctx.moveTo(lE-18, y+h-18);
+          ctx.lineTo(lE, y+h);
+          ctx.stroke();
+
+          if((Lsel.xfadeMs ?? 0) > 0){
+            ctx.strokeStyle = 'rgba(255,220,140,.95)';
+            ctx.beginPath();
+            ctx.moveTo(lS, y+h-2);
+            ctx.lineTo(lS+14, y+h-18);
+            ctx.stroke();
+          }
+        }
+
+        const mid = y + h/2 + this.viewOffsetY * h;
         ctx.strokeStyle = 'rgba(255,255,255,.22)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(0, y + h/2 + 0.5);
-        ctx.lineTo(W, y + h/2 + 0.5);
+        ctx.moveTo(0, mid + 0.5);
+        ctx.lineTo(W, mid + 0.5);
         ctx.stroke();
+
+        if(this.gridPower && this.gridMode==='auto'){
+          const amp = (h/2) * 0.92 * this.zoomY;
+          const thresholdAmp = this.gridThreshold;
+          const yTop = mid - thresholdAmp * amp;
+          const yBottom = mid + thresholdAmp * amp;
+          ctx.strokeStyle = 'rgba(182,120,255,.85)';
+          ctx.setLineDash([6,4]);
+          ctx.beginPath();
+          ctx.moveTo(0, yTop + 0.5);
+          ctx.lineTo(W, yTop + 0.5);
+          ctx.moveTo(0, yBottom + 0.5);
+          ctx.lineTo(W, yBottom + 0.5);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        if(this.loopEditView && this._isLoopTabActive()){
+          const seam = W/2;
+          ctx.fillStyle = 'rgba(0,0,0,.28)';
+          ctx.fillRect(seam-1, y, 2, h);
+          ctx.fillStyle = 'rgba(255,255,255,.08)';
+          ctx.fillRect(0, y, seam, h);
+          ctx.fillStyle = 'rgba(255,255,255,.04)';
+          ctx.fillRect(seam, y, seam, h);
+          ctx.fillStyle = 'rgba(0,0,0,.20)';
+          ctx.fillRect(seam+20, y, seam-20, h);
+        }
+
+        if(this._isSyncTabActive() && this.selectedSlices.size){
+          const slices = this._sliceRegions();
+          ctx.fillStyle = 'rgba(57,217,138,.25)';
+          for(const sl of slices){
+            if(!this.selectedSlices.has(sl.idx)) continue;
+            const x0 = this._timeToX(sl.s), x1 = this._timeToX(sl.e);
+            ctx.fillRect(Math.min(x0,x1), y, Math.abs(x1-x0), h);
+          }
+        }
       }
 
       _drawWave(ctx, W, y, h){
@@ -2048,7 +4429,7 @@
         const i0 = this._timeToSampleIndex(start);
         const i1 = this._timeToSampleIndex(end);
 
-        const mid = y + h/2;
+        const mid = y + h/2 + this.viewOffsetY * h;
         const amp = (h/2) * 0.92 * this.zoomY;
 
         ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--waveLine');
@@ -2076,10 +4457,34 @@
         ctx.stroke();
       }
 
+      _drawEnvelopeOverlay(ctx, W, y, h){
+        if(!this._isEnvTabActive()) return;
+        const env = this._visibleEnvelope();
+        if(!env || !env.points?.length) return;
+        const pts = [...env.points].sort((a,b)=>a.t-b.t);
+
+        ctx.strokeStyle = 'rgba(255,153,58,.95)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for(let i=0;i<pts.length;i++){
+          const px = this._timeToX(this.zoneStart + pts[i].t*(this.zoneEnd-this.zoneStart));
+          const py = this._envValueToY(pts[i].v, y, h);
+          if(i===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+
+        for(let i=0;i<pts.length;i++){
+          const px = this._timeToX(this.zoneStart + pts[i].t*(this.zoneEnd-this.zoneStart));
+          const py = this._envValueToY(pts[i].v, y, h);
+          ctx.fillStyle = (i===this.selectedEnvPointIdx) ? 'rgba(255,210,120,1)' : 'rgba(255,153,58,.95)';
+          ctx.fillRect(px-3, py-3, 6, 6);
+        }
+      }
+
       _drawMarkers(ctx, W, y, h){
         const L = this._activeLoop();
 
-        const drawLine = (x, color, label)=>{
+        const drawLine = (x, color, label, opts={})=>{
           ctx.strokeStyle = color;
           ctx.lineWidth = 2;
           ctx.beginPath();
@@ -2087,35 +4492,72 @@
           ctx.lineTo(x+0.5, y+h);
           ctx.stroke();
 
-          // top cap
-          ctx.fillStyle = color;
-          ctx.fillRect(x-5, y, 10, 4);
+          if(opts.bottomFlag){
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x, y+h);
+            ctx.lineTo(x-8, y+h-10);
+            ctx.lineTo(x+8, y+h-10);
+            ctx.closePath();
+            ctx.fill();
+          }else{
+            ctx.fillStyle = color;
+            ctx.fillRect(x-5, y, 10, 4);
+          }
 
-          // label bubble
           ctx.font = '11px var(--mono)';
-          ctx.fillStyle = 'rgba(0,0,0,.70)';
-          ctx.strokeStyle = 'rgba(255,255,255,.12)';
           const txt = label;
           const w = ctx.measureText(txt).width + 10;
           const bx = this._clamp(x - w/2, 6, W-w-6);
           const by = y + 6;
 
-          // bubble bg
           ctx.fillStyle = 'rgba(0,0,0,.40)';
           ctx.fillRect(bx, by, w, 18);
+          ctx.strokeStyle = 'rgba(255,255,255,.12)';
           ctx.strokeRect(bx+0.5, by+0.5, w-1, 17);
-
           ctx.fillStyle = color;
           ctx.fillText(txt, bx+5, by+4);
         };
 
-        const zoneColor = getComputedStyle(document.documentElement).getPropertyValue('--markerZone').trim();
+        const zoneStartColor = getComputedStyle(document.documentElement).getPropertyValue('--markerZone').trim();
+        const zoneEndColor = getComputedStyle(document.documentElement).getPropertyValue('--danger').trim();
         const loopColor = getComputedStyle(document.documentElement).getPropertyValue('--markerLoop').trim();
 
-        drawLine(this._timeToX(this.zoneStart), zoneColor, 'Zone Start');
-        drawLine(this._timeToX(this.zoneEnd),   zoneColor, 'Zone End');
-        drawLine(this._timeToX(L.start), loopColor, 'Loop Start');
-        drawLine(this._timeToX(L.end),   loopColor, 'Loop End');
+        drawLine(this._timeToX(this.zoneStart), zoneStartColor, 'Zone Start', {bottomFlag:true});
+        drawLine(this._timeToX(this.zoneEnd),   zoneEndColor, 'Zone End');
+        if(L?.active && this.loopGlobalPower){
+          drawLine(this._timeToX(L.start), loopColor, 'Loop Start');
+          drawLine(this._timeToX(L.end),   loopColor, 'Loop End');
+        }
+
+        if(this.gridPower){
+          ctx.font = '11px var(--mono)';
+          for(let i=0;i<this.gridMarkers.length;i++){
+            const m = this.gridMarkers[i];
+            const x = this._timeToX(this._markerTime(m));
+            const lockedColor = 'rgba(150,150,150,.9)';
+            const normalColor = (i===0) ? 'rgba(87,210,255,.95)' : 'rgba(255,255,255,.45)';
+            ctx.strokeStyle = m.locked ? lockedColor : normalColor;
+            ctx.lineWidth = (i===0) ? 2 : 1;
+            ctx.beginPath();
+            ctx.moveTo(x+0.5, y);
+            ctx.lineTo(x+0.5, y+h);
+            ctx.stroke();
+
+            ctx.fillStyle = m.locked ? 'rgba(150,150,150,.9)' : 'rgba(87,210,255,.95)';
+            ctx.beginPath();
+            ctx.moveTo(x, y+2);
+            ctx.lineTo(x-5, y+11);
+            ctx.lineTo(x+5, y+11);
+            ctx.closePath();
+            ctx.fill();
+
+            if(i===0){
+              ctx.fillStyle = m.locked ? 'rgba(170,170,170,.95)' : 'rgba(87,210,255,.95)';
+              ctx.fillText('1', x+6, y+5);
+            }
+          }
+        }
       }
 
       /* ============================= HELPERS ============================= */
@@ -2153,6 +4595,7 @@
       _togglePressed(btn){
         const v = !this._isPressed(btn);
         btn.setAttribute('aria-pressed', String(v));
+        this.needsRedraw = true;
       }
       _isPressed(btn){ return btn.getAttribute('aria-pressed') === 'true'; }
 
