@@ -513,6 +513,10 @@
     .syncRow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .syncKeyboard{ border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:8px; background:rgba(0,0,0,.18); }
     .kbGrid{ display:grid; grid-template-columns: repeat(24, minmax(18px,1fr)); gap:2px; }
+    .perfPads{ border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:8px; background:rgba(0,0,0,.16); display:grid; gap:8px; }
+    .perfPadsGrid{ display:grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap:6px; }
+    .perfPad{ height:34px; border:1px solid rgba(255,255,255,.18); border-radius:6px; background:linear-gradient(180deg, rgba(18,26,36,.82), rgba(8,12,17,.62)); color:var(--txt); font-size:12px; cursor:pointer; }
+    .perfPad.hot{ border-color: rgba(242,193,78,.75); box-shadow: inset 0 0 0 1px rgba(242,193,78,.28); }
     .kbKey{ height:28px; border-radius:4px; border:1px solid rgba(255,255,255,.14); background:rgba(28,40,56,.75); }
     .kbKey.black{ background:rgba(8,12,17,.85); height:20px; margin-top:0; }
     .kbKey.mapped{ box-shadow: inset 0 0 0 2px rgba(242,193,78,.85); background: rgba(242,193,78,.35); }
@@ -821,6 +825,20 @@
                 <span class="pill" id="hitpointThresholdPill">0.35</span>
               </div>
               <div class="syncKeyboard" id="syncKeyboard"><div class="kbGrid" id="kbGrid"></div></div>
+              <div class="perfPads" id="perfPads">
+                <div class="syncRow">
+                  <span style="font-size:12px;color:var(--muted2);">Performance Pads</span>
+                  <button class="miniToggle" id="ppModeSampler" aria-pressed="true">Sampler</button>
+                  <button class="miniToggle" id="ppModeKeyboard" aria-pressed="false">Keyboard</button>
+                  <button class="miniToggle" id="ppModeBeatJump" aria-pressed="false">Beat Jump</button>
+                  <button class="miniToggle" id="ppModeEffects" aria-pressed="false">Effects</button>
+                  <button class="miniToggle" id="ppShift" aria-pressed="false">SHIFT</button>
+                  <button class="btn icon" id="ppParamMinus">◀</button>
+                  <button class="btn icon" id="ppParamPlus">▶</button>
+                </div>
+                <div class="perfPadsGrid" id="perfPadsGrid"></div>
+                <div class="small" id="perfPadsHint" style="color:var(--muted2);">Pads trigger slices from current hitpoints.</div>
+              </div>
             </div>
           </div>
 
@@ -1170,6 +1188,15 @@
         this.hitpointThresholdPill = document.querySelector('#hitpointThresholdPill');
         this.syncKeyboard = document.querySelector('#syncKeyboard');
         this.kbGrid = document.querySelector('#kbGrid');
+        this.perfPadsGrid = document.querySelector('#perfPadsGrid');
+        this.perfPadsHint = document.querySelector('#perfPadsHint');
+        this.ppModeSamplerBtn = document.querySelector('#ppModeSampler');
+        this.ppModeKeyboardBtn = document.querySelector('#ppModeKeyboard');
+        this.ppModeBeatJumpBtn = document.querySelector('#ppModeBeatJump');
+        this.ppModeEffectsBtn = document.querySelector('#ppModeEffects');
+        this.ppShiftBtn = document.querySelector('#ppShift');
+        this.ppParamMinusBtn = document.querySelector('#ppParamMinus');
+        this.ppParamPlusBtn = document.querySelector('#ppParamPlus');
 
         // Menus
         this.snapMenu = document.querySelector('#snapMenu');
@@ -1243,6 +1270,12 @@
         this._beatPlaying = false;
         this._beatIdx = 0;
 
+        // Performance pads
+        this.perfPadMode = 'sampler';
+        this.perfPadShift = false;
+        this.perfPadParamOffset = 0;
+        this.perfPadHotCue = 0;
+
         // Zone Envelopes
         this.zone = { envelopes: [], visibleEnvelopeId: null, pendingTarget: null };
         this.selectedEnvPointIdx = -1;
@@ -1286,6 +1319,7 @@
         this._renderLoopPanel();
         this._syncReadouts();
         this._initSyncSliceUI();
+        this._initPerformancePadsUI();
         this._initZoneEnvelopesUI();
         this._initSampleEditorUI();
         this._initScriptEditorUI();
@@ -1748,6 +1782,87 @@
           this._beatTimer = setTimeout(tick, targetPerSlice * 1000);
         };
         tick();
+      }
+
+
+      _initPerformancePadsUI(){
+        if(!this.perfPadsGrid) return;
+        this.perfPadsGrid.innerHTML = '';
+        for(let i=0;i<8;i++){
+          const b = document.createElement('button');
+          b.className = 'perfPad';
+          b.dataset.pad = String(i);
+          b.addEventListener('click', ()=>this._triggerPerformancePad(i));
+          this.perfPadsGrid.appendChild(b);
+        }
+
+        const setMode = (m)=>{ this.perfPadMode = m; this._refreshPerformancePads(); };
+        this.ppModeSamplerBtn.addEventListener('click', ()=>setMode('sampler'));
+        this.ppModeKeyboardBtn.addEventListener('click', ()=>setMode('keyboard'));
+        this.ppModeBeatJumpBtn.addEventListener('click', ()=>setMode('beatjump'));
+        this.ppModeEffectsBtn.addEventListener('click', ()=>setMode('effects'));
+        this.ppShiftBtn.addEventListener('click', ()=>{ this.perfPadShift = !this.perfPadShift; this._refreshPerformancePads(); });
+        this.ppParamMinusBtn.addEventListener('click', ()=>{ this.perfPadParamOffset = Math.max(0, this.perfPadParamOffset - 8); this._refreshPerformancePads(); });
+        this.ppParamPlusBtn.addEventListener('click', ()=>{ this.perfPadParamOffset += 8; this._refreshPerformancePads(); });
+        this._refreshPerformancePads();
+      }
+
+      _refreshPerformancePads(){
+        if(!this.perfPadsGrid) return;
+        const mode = this.perfPadMode;
+        this.ppModeSamplerBtn.setAttribute('aria-pressed', String(mode==='sampler'));
+        this.ppModeKeyboardBtn.setAttribute('aria-pressed', String(mode==='keyboard'));
+        this.ppModeBeatJumpBtn.setAttribute('aria-pressed', String(mode==='beatjump'));
+        this.ppModeEffectsBtn.setAttribute('aria-pressed', String(mode==='effects'));
+        this.ppShiftBtn.setAttribute('aria-pressed', String(this.perfPadShift));
+
+        const labels = mode==='beatjump'
+          ? ['-8','-4','-2','-1','+1','+2','+4','+8']
+          : mode==='effects'
+          ? ['FX A','FX B','FX C','FX D','FX E','FX F','FX G','FX H']
+          : Array.from({length:8}, (_,i)=>`Pad ${i+1}`);
+        Array.from(this.perfPadsGrid.children).forEach((el,i)=>{
+          const target = this.perfPadParamOffset + i;
+          el.textContent = `${labels[i]} · S${target+1}`;
+          el.classList.toggle('hot', target===this.perfPadHotCue);
+        });
+        this.perfPadsHint.textContent = `Mode: ${mode}${this.perfPadShift ? ' (shift)' : ''} · offset ${this.perfPadParamOffset}`;
+      }
+
+      _triggerPerformancePad(localIdx){
+        const idx = this.perfPadParamOffset + localIdx;
+        const slices = this._sliceRegions();
+        if(!slices.length){ this._toast('No slices/hitpoints available.'); return; }
+        const clamped = this._clamp(idx, 0, slices.length-1);
+
+        if(this.perfPadMode==='sampler'){
+          if(this.perfPadShift){ this.perfPadHotCue = clamped; this._refreshPerformancePads(); return; }
+          this._auditionGridSlice(clamped);
+          return;
+        }
+
+        if(this.perfPadMode==='keyboard'){
+          const target = this.perfPadShift ? this.perfPadHotCue : clamped;
+          this._loopToSlice(target, true);
+          this.perfPadHotCue = target;
+          this._refreshPerformancePads();
+          return;
+        }
+
+        if(this.perfPadMode==='beatjump'){
+          const jumps = [-8,-4,-2,-1,1,2,4,8];
+          const step = this._gridStepSeconds();
+          const delta = jumps[localIdx] * step;
+          this.viewStart = this._clamp(this.viewStart + delta, this.zoneStart, this.zoneEnd - (this.viewEnd-this.viewStart));
+          this.viewEnd = this.viewStart + (this.viewEnd-this.viewStart);
+          this._clampViewToZone();
+          this.needsRedraw = true;
+          return;
+        }
+
+        // effects mode stub actions
+        const names = ['A','B','C','D','E','F','G','H'];
+        this._toast(`Effect ${names[localIdx]} trigger${this.perfPadShift ? ' (alt)' : ''}`);
       }
 
       _initZoneEnvelopesUI(){
