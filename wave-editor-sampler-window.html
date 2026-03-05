@@ -528,6 +528,11 @@
     .sampleEditWrap{ display:grid; grid-template-columns: 1fr 220px; gap:10px; }
     .sampleEditCols{ display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
 
+    .mixerRack{ display:flex; align-items:flex-end; justify-content:center; gap:14px; padding:8px 10px 10px 10px; }
+    .chStrip{ width:52px; display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--muted2); font-size:10px; }
+    .chStrip input[type="range"]{ writing-mode: vertical-lr; direction: rtl; width:22px; height:118px; }
+    .mixCenter{ min-width:130px; text-align:center; border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:6px 8px; background:rgba(0,0,0,.18); font-size:11px; color:var(--muted2); }
+
     .rackHeader, .instrumentHeader{
       display:flex;
       align-items:center;
@@ -724,6 +729,24 @@
           <div class="stripBtn small" id="fitY" title="Fit vertical zoom">FIT</div>
           <div class="stripBtn small" id="zoomIn" title="Zoom in (horizontal)">ZOOM+</div>
           <div class="stripBtn small" id="zoomOut" title="Zoom out (horizontal)">ZOOM−</div>
+        </div>
+      </div>
+
+      <div class="mixerRack" id="mixerRack">
+        <div class="chStrip">
+          <b style="color:var(--txt);">CH 1</b>
+          <input id="ch1Fader" type="range" min="0" max="1" step="0.01" value="1" />
+          <span id="ch1Val">1.00</span>
+        </div>
+        <div class="mixCenter">
+          <div><b style="color:var(--txt);">MASTER</b></div>
+          <div style="color:#ff6f5f;font-weight:700;">CLIP</div>
+          <div style="font-family:var(--mono);" id="masterMixVal">0.90</div>
+        </div>
+        <div class="chStrip">
+          <b style="color:var(--txt);">CH 2</b>
+          <input id="ch2Fader" type="range" min="0" max="1" step="0.01" value="1" />
+          <span id="ch2Val">1.00</span>
         </div>
       </div>
 
@@ -1100,6 +1123,11 @@
         this.fitYBtn = document.querySelector('#fitY');
         this.zoomInBtn = document.querySelector('#zoomIn');
         this.zoomOutBtn = document.querySelector('#zoomOut');
+        this.ch1FaderEl = document.querySelector('#ch1Fader');
+        this.ch2FaderEl = document.querySelector('#ch2Fader');
+        this.ch1ValEl = document.querySelector('#ch1Val');
+        this.ch2ValEl = document.querySelector('#ch2Val');
+        this.masterMixValEl = document.querySelector('#masterMixVal');
 
         // Status readouts
         this.sampleNameEl = document.querySelector('#sampleName');
@@ -1231,6 +1259,8 @@
         this.bitDepth = 24;          // display only
         this.source = null;
         this.masterGain = null;
+        this.ch1Level = 1;
+        this.ch2Level = 1;
 
         // ---- Editor state
         this.zoomY = 1.0;
@@ -1402,6 +1432,15 @@
 
         this.zoomInBtn.addEventListener('click', ()=>this._zoomAround((this.viewStart+this.viewEnd)/2, 0.6));
         this.zoomOutBtn.addEventListener('click', ()=>this._zoomOutOne());
+
+        const syncCh = ()=>{
+          this.ch1Level = this._clamp(Number(this.ch1FaderEl.value), 0, 1);
+          this.ch2Level = this._clamp(Number(this.ch2FaderEl.value), 0, 1);
+          this._syncChannelMixer();
+        };
+        this.ch1FaderEl.addEventListener('input', syncCh);
+        this.ch2FaderEl.addEventListener('input', syncCh);
+        this._syncChannelMixer();
 
         // Grid controls
         this.gridPowerBtn.addEventListener('click', ()=>{
@@ -2649,6 +2688,15 @@ ${source}
         }
       }
 
+
+      _syncChannelMixer(){
+        const gain = 0.9 * this.ch1Level * this.ch2Level;
+        if(this.masterGain) this.masterGain.gain.value = gain;
+        if(this.ch1ValEl) this.ch1ValEl.textContent = this.ch1Level.toFixed(2);
+        if(this.ch2ValEl) this.ch2ValEl.textContent = this.ch2Level.toFixed(2);
+        if(this.masterMixValEl) this.masterMixValEl.textContent = gain.toFixed(2);
+      }
+
       _initCanvas(){
         const resize = ()=>{
           const r = this.wavePane.getBoundingClientRect();
@@ -2717,6 +2765,7 @@ ${source}
         this.masterGain = this.audioCtx.createGain();
         this.masterGain.gain.value = 0.9;
         this.masterGain.connect(this.audioCtx.destination);
+        this._syncChannelMixer();
       }
 
       /* ============================= FILE LOAD ============================= */
